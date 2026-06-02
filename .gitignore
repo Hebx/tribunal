@@ -17,6 +17,9 @@ deployment.*.json
 # Scratch / temp
 sdk/faucet-tmp.mjs
 
+# Internal planning docs — kept local only, not for the public repo
+docs/
+
 # OS / editor
 .DS_Store
 *.swp
