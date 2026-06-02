@@ -9,11 +9,13 @@ on:
     branches: [main]
     paths:
       - 'move/**'
+      - 'sdk/**'
       - '.github/workflows/move-ci.yml'
   push:
     branches: [main]
     paths:
       - 'move/**'
+      - 'sdk/**'
       - '.github/workflows/move-ci.yml'
 
 # Pin the Sui release the package is developed + verified against (sui 1.72.5).
@@ -63,3 +65,26 @@ jobs:
       - name: Move test
         working-directory: move
         run: sui move test
+
+  sdk-typecheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: sdk/package-lock.json
+
+      - name: Install deps
+        working-directory: sdk
+        run: npm ci
+
+      - name: Typecheck SDK
+        working-directory: sdk
+        run: npm run typecheck
+
