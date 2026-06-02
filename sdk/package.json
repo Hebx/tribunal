@@ -1,0 +1,22 @@
+{
+  "name": "@tribunal/sdk",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TypeScript SDK for Tribunal — PTB builders, event subscription, and evidence verification for the credibly-neutral AI resolution oracle on Sui.",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "deploy": "node --import tsx scripts/deploy.ts",
+    "e2e": "node --import tsx scripts/e2e.ts"
+  },
+  "dependencies": {
+    "@mysten/sui": "^2.17.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
