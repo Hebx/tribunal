@@ -360,3 +360,32 @@ fun test_evidence_empty_blob_aborts() {
     let a = evidence::new_ref(b"", b"sha", false, 100);
     evidence::assert_certified(&a, 50);   // empty blob id -> not certified
 }
+
+// === Seal access policy (pure predicates behind seal_approve) ===
+
+#[test]
+fun test_seal_can_decrypt_gates() {
+    // settled verdict is publicly auditable regardless of caller
+    assert!(evidence::can_decrypt(true, false), 0);
+    assert!(evidence::can_decrypt(true, true), 1);
+    // before settlement, only the recorded resolver may decrypt
+    assert!(evidence::can_decrypt(false, true), 2);
+    // before settlement, a non-resolver is denied
+    assert!(!evidence::can_decrypt(false, false), 3);
+}
+
+#[test]
+fun test_seal_identity_prefix_bind() {
+    let ns = b"walrus-ns://tribunal/case-1";
+    // an identity under the namespace is accepted (ns ‖ entry_id)
+    assert!(evidence::is_prefix(ns, b"walrus-ns://tribunal/case-1/verdict"), 0);
+    // exact namespace match is a valid prefix
+    assert!(evidence::is_prefix(ns, ns), 1);
+    // a different case's namespace is rejected (cross-case key reuse blocked)
+    assert!(!evidence::is_prefix(ns, b"walrus-ns://tribunal/case-2/verdict"), 2);
+    // a longer prefix than the word can never match
+    assert!(!evidence::is_prefix(b"walrus-ns://tribunal/case-1/extra", ns), 3);
+    // empty prefix matches anything
+    assert!(evidence::is_prefix(b"", b"anything"), 4);
+}
+
