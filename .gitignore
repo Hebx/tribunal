@@ -1,0 +1,15 @@
+# Move build artifacts
+move/build/
+**/build/
+
+# Sui local config / keys (never commit)
+*.key
+*.keystore
+.sui/
+
+# OS / editor
+.DS_Store
+*.swp
+node_modules/
+.env
+.env.*
