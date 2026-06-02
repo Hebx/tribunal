@@ -1,0 +1,65 @@
+name: move-ci
+
+# Gates every PR into main: the Move package must build clean and all unit
+# tests must pass. Uses the prebuilt Sui mainnet binary (compiling from source
+# is ~30min and would make CI unusable).
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'move/**'
+      - '.github/workflows/move-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'move/**'
+      - '.github/workflows/move-ci.yml'
+
+# Pin the Sui release the package is developed + verified against (sui 1.72.5).
+env:
+  SUI_VERSION: mainnet-v1.72.5
+
+jobs:
+  move-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache Sui binary
+        id: cache-sui
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/bin/sui
+          key: sui-${{ env.SUI_VERSION }}-ubuntu-x86_64
+
+      - name: Install Sui (prebuilt)
+        if: steps.cache-sui.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.local/bin" /tmp/sui-extract
+          # Resolve the ubuntu x86_64 tarball for the pinned release tag.
+          ASSET_URL=$(curl -sL \
+            "https://api.github.com/repos/MystenLabs/sui/releases/tags/${SUI_VERSION}" \
+            | python3 -c "import sys,json;print(next(a['browser_download_url'] for a in json.load(sys.stdin)['assets'] if 'ubuntu' in a['name'].lower() and 'x86_64' in a['name']))")
+          echo "Downloading $ASSET_URL"
+          curl -sL -o /tmp/sui.tgz "$ASSET_URL"
+          tar xzf /tmp/sui.tgz -C /tmp/sui-extract
+          cp "$(find /tmp/sui-extract -name sui -type f | head -1)" "$HOME/.local/bin/sui"
+          chmod +x "$HOME/.local/bin/sui"
+          rm -rf /tmp/sui.tgz /tmp/sui-extract
+
+      - name: Sui version
+        run: |
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/sui" --version
+
+      - name: Move build
+        working-directory: move
+        run: sui move build
+
+      - name: Move test
+        working-directory: move
+        run: sui move test
