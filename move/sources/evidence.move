@@ -61,12 +61,29 @@ public fun assert_certified(a: &ArtifactRef, current_epoch: u64) {
     assert!(a.epoch >= current_epoch, EBlobExpired);
 }
 
-/// Seal decryption policy stub (M1). Returns whether `viewer` may decrypt the
-/// sealed evidence for `case_id`. Gated on stable facts only. M2 replaces this
-/// with an `entry fun seal_approve(...)` the Seal key servers call, reading the
-/// case's participant/disputer set. Kept pure + view-only here so the case
-/// module and tests can exercise the access shape without the Seal dependency.
-public fun can_decrypt(_case_id: ID, _viewer: address): bool {
-    // M1: permissive stub — real gating lands with the Seal wiring in M2.
+/// Seal access predicate (pure, testable without the Seal dependency).
+///
+/// Gates on STABLE facts only (Seal is not evaluated atomically across key
+/// servers, so policy must not depend on tx-ordering-sensitive state):
+///   - `settled`      : once a verdict is final it is PUBLICLY auditable — any
+///                      party may decrypt the rationale/evidence (transparency).
+///   - `is_resolver`  : before settlement, only the recorded committee operator
+///                      (resolver) may decrypt the in-progress evidence.
+/// Both inputs are terminal/monotonic for a given case, so the decision is
+/// stable regardless of which key server evaluates it or when.
+public fun can_decrypt(settled: bool, is_resolver: bool): bool {
+    settled || is_resolver
+}
+
+/// True if `prefix` is a prefix of `word`. Used to bind a Seal identity to a
+/// case's memory namespace (`memory_ns ‖ entry_id`), so one namespace can cover
+/// many sealed entries while every identity still maps to exactly one case.
+public fun is_prefix(prefix: vector<u8>, word: vector<u8>): bool {
+    if (prefix.length() > word.length()) return false;
+    let mut i = 0;
+    while (i < prefix.length()) {
+        if (prefix[i] != word[i]) return false;
+        i = i + 1;
+    };
     true
 }

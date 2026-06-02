@@ -25,7 +25,7 @@ use std::hash;
 use sui::balance::{Self, Balance};
 use sui::coin;
 use sui::event;
-use tribunal::evidence::ArtifactRef;
+use tribunal::evidence::{Self, ArtifactRef};
 
 // === Error codes (one per gate; mirrored by #[expected_failure] tests) ===
 const EWrongCap: u64 = 1;        // ResolverCap does not match this case
@@ -215,6 +215,35 @@ public fun is_resolved<T>(case: &Case<T>): bool { is_settled(&case.state) }
 
 /// True while the case sits in the `Disputed` state.
 public fun is_disputed<T>(case: &Case<T>): bool { is_disputed_state(&case.state) }
+
+// === Seal access policy (the function Seal key servers call) ===
+//
+// Seal evaluates an `entry fun seal_approve*(id: vector<u8>, ...)` inside a
+// dry-run PTB; if it does NOT abort, the t-of-n key servers release the
+// decryption shares. We gate decryption of a case's sealed evidence/memory on
+// STABLE facts only (skill §9 — Seal is not atomic across servers):
+//   1. The Seal identity `id` must be prefixed by this case's `memory_ns`, so
+//      a key released for one case can never decrypt another case's blobs.
+//   2. Access is granted iff the case is SETTLED (verdict is public + auditable)
+//      OR the caller is the recorded resolver (committee operator working the
+//      in-progress case). Both are terminal/monotonic — never tx-order sensitive.
+//
+// `caller` is bound by Seal to the address that signed the personal-message
+// session key, so passing it is sound (the key server verifies the signature
+// before running this PTB).
+const ENoAccess: u64 = 8;
+
+entry fun seal_approve<T>(id: vector<u8>, caller: address, case: &Case<T>) {
+    // identity must belong to this case's namespace
+    assert!(evidence::is_prefix(case.memory_ns, id), ENoAccess);
+
+    let settled = is_settled(&case.state);
+    let is_resolver =
+        option::is_some(&case.resolver) && *option::borrow(&case.resolver) == caller;
+
+    assert!(evidence::can_decrypt(settled, is_resolver), ENoAccess);
+}
+
 
 // === Cross-module hooks for `tribunal::dispute` (package-internal) ===
 // The dispute module lives in this package and needs to read/mutate Case state
