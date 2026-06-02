@@ -34,6 +34,7 @@ const ENotOpen: u64 = 3;         // case is not in Open state
 const ENotAsserted: u64 = 4;     // case is not in Asserted state
 const ETooEarly: u64 = 5;        // resolution asserted before expiry_epoch
 const ELivenessNotPassed: u64 = 6; // settle called before the challenge window closed
+const EWindowClosed: u64 = 7;    // dispute filed after the liveness window closed
 
 // === Lifecycle states ===
 public enum CaseState has copy, drop, store {
@@ -62,6 +63,7 @@ public struct Case<phantom T> has key {
     liveness_epochs: u64,             // challenge window length (in epochs)
     asserted_at_epoch: u64,           // epoch the resolution was asserted
     consumer_id: Option<ID>,          // downstream object this resolves for
+    fee_recipient: address,           // protocol-fee destination, locked at creation
 }
 
 // === Capabilities (authority as non-copyable objects) ===
@@ -118,6 +120,7 @@ public fun create_case<T>(
         liveness_epochs,
         asserted_at_epoch: 0,
         consumer_id,
+        fee_recipient: ctx.sender(),  // deployment authority = protocol-fee recipient
     };
     let case_id = object::id(&case);
     event::emit(CaseCreated {
@@ -207,12 +210,76 @@ public fun memory_ns<T>(case: &Case<T>): vector<u8> { case.memory_ns }
 public fun bond_value<T>(case: &Case<T>): u64 { balance::value(&case.resolver_bond) }
 public fun consumer_id<T>(case: &Case<T>): Option<ID> { case.consumer_id }
 
+/// True once the case has reached a terminal Settled state.
+public fun is_resolved<T>(case: &Case<T>): bool { is_settled(&case.state) }
+
+/// True while the case sits in the `Disputed` state.
+public fun is_disputed<T>(case: &Case<T>): bool { is_disputed_state(&case.state) }
+
+// === Cross-module hooks for `tribunal::dispute` (package-internal) ===
+// The dispute module lives in this package and needs to read/mutate Case state
+// and move the escrowed bond. We expose narrow `public(package)` functions
+// rather than making fields public, so the invariants stay enforced here.
+
+/// Verify the resolver cap matches this case (package-internal reuse).
+public(package) fun assert_cap_matches<T>(case: &Case<T>, cap: &ResolverCap) {
+    assert!(cap.case_id == object::id(case), EWrongCap);
+}
+
+/// Abort unless the case is currently `Asserted` (a valid dispute target).
+public(package) fun assert_asserted<T>(case: &Case<T>) {
+    assert!(is_asserted(&case.state), ENotAsserted);
+}
+
+/// Abort unless `now` is still within the liveness window (dispute filing guard).
+public(package) fun assert_within_window<T>(case: &Case<T>, now: u64) {
+    assert!(now < case.asserted_at_epoch + case.liveness_epochs, EWindowClosed);
+}
+
+/// Move the case into the `Disputed` state. Caller (dispute module) is
+/// responsible for the guards above.
+public(package) fun mark_disputed<T>(case: &mut Case<T>) {
+    case.state = CaseState::Disputed;
+}
+
+/// Withdraw the full escrowed resolver bond (dispute module redistributes it).
+public(package) fun take_resolver_bond<T>(case: &mut Case<T>): Balance<T> {
+    case.resolver_bond.withdraw_all()
+}
+
+/// Finalize a disputed case: set the (possibly flipped) outcome + Settled state
+/// and emit `CaseSettled` with disputed=true. Called by `resolve_dispute`.
+public(package) fun finalize_disputed<T>(case: &mut Case<T>, outcome_true: bool) {
+    case.outcome_true = outcome_true;
+    case.state = if (outcome_true) { CaseState::SettledTrue } else { CaseState::SettledFalse };
+    event::emit(CaseSettled {
+        case_id: object::id(case),
+        outcome_true,
+        disputed: true,
+    });
+}
+
+/// Outcome currently recorded on the case (the resolver's asserted outcome until
+/// a dispute flips it).
+public(package) fun current_outcome<T>(case: &Case<T>): bool { case.outcome_true }
+
+/// Resolver address recorded at assertion (bond / reward destination).
+public(package) fun resolver_addr<T>(case: &Case<T>): address {
+    *option::borrow(&case.resolver)
+}
+
+/// Protocol-fee destination locked at creation.
+public(package) fun fee_recipient<T>(case: &Case<T>): address { case.fee_recipient }
+
 // === State predicates (enum matching) ===
 public fun is_open(s: &CaseState): bool {
     match (s) { CaseState::Open => true, _ => false }
 }
 public fun is_asserted(s: &CaseState): bool {
     match (s) { CaseState::Asserted => true, _ => false }
+}
+public fun is_disputed_state(s: &CaseState): bool {
+    match (s) { CaseState::Disputed => true, _ => false }
 }
 public fun is_settled(s: &CaseState): bool {
     match (s) {
