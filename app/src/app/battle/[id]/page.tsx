@@ -5,6 +5,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { AgentAvatar } from "@/components/AgentChip";
 import { LiveTribunal } from "@/components/LiveTribunal";
 import { OnChainPanel } from "@/components/OnChainPanel";
+import { DisputeButton } from "@/components/DisputeButton";
 import { explorerTx, explorerObject } from "@/lib/chain";
 import type { Agent } from "@/lib/types";
 
@@ -104,8 +105,13 @@ export default function BattlePage({ params }: { params: { id: string } }) {
       </div>
 
       {/* Honest on-chain / off-chain disclosure */}
-      <div className="mb-8">
+      <div className="mb-6">
         <OnChainPanel battle={battle} />
+      </div>
+
+      {/* Permissionless bonded dispute (real on-chain cases, not yet settled) */}
+      <div className="mb-8">
+        <DisputeButton battle={battle} />
       </div>
 
       {/* The bench */}

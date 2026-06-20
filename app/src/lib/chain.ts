@@ -15,6 +15,11 @@ export const CREATOR_CAP_ID =
   process.env.NEXT_PUBLIC_TRIBUNAL_CREATOR_CAP ??
   "0x93bf5289e187944eb377d82624c06d3e2eaf8d5a650a66fa9668b13fca77a42b";
 
+/** Deployer address holding CaseCreatorCap — gates create_case / assert_resolution. */
+export const CAP_HOLDER =
+  process.env.NEXT_PUBLIC_TRIBUNAL_CAP_HOLDER ??
+  "0x36939a27ef7eb60fa31aae905f2f7cbed8940c98c8178affc8ae154acabbc1d4";
+
 export const PUBLISH_DIGEST = "3XTZqjrLrXGxtiFu9obhitqk1qHb9dvP2Pn45f8X91Xc";
 
 /** Event type suffixes emitted by the package. */
