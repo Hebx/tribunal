@@ -72,18 +72,28 @@ async function readEntry(quiltId: string, identifier: string): Promise<any | nul
  */
 export async function recall(query: string, quiltIds: string[], k = 5): Promise<CaseLawHit[]> {
   const qv = embed(query);
-  const hits: CaseLawHit[] = [];
 
-  for (const quiltId of quiltIds) {
-    const manifest = await readEntry(quiltId, "_manifest");
-    if (!manifest?.rows) continue;
-    for (const row of manifest.rows) {
-      // Only public kinds are plaintext on Walrus; skip sealed deliberation.
-      if (row.kind !== "verdict" && row.kind !== "case_law") continue;
-      const entry = await readEntry(quiltId, row.identifier);
-      if (!entry?.text) continue;
-      hits.push({ score: cosine(qv, embed(entry.text)), kind: entry.kind, text: entry.text, quiltId });
-    }
-  }
-  return hits.sort((a, b) => b.score - a.score).slice(0, k);
+  // Read all quilts in parallel; within each, read its public entries in parallel.
+  const perQuilt = await Promise.all(
+    quiltIds.map(async (quiltId) => {
+      const manifest = await readEntry(quiltId, "_manifest");
+      if (!manifest?.rows) return [] as CaseLawHit[];
+      const publicRows = manifest.rows.filter(
+        (row: any) => row.kind === "verdict" || row.kind === "case_law",
+      );
+      const entries = await Promise.all(
+        publicRows.map((row: any) => readEntry(quiltId, row.identifier)),
+      );
+      return entries
+        .filter((e) => e?.text)
+        .map((entry) => ({
+          score: cosine(qv, embed(entry.text)),
+          kind: entry.kind,
+          text: entry.text,
+          quiltId,
+        }));
+    }),
+  );
+
+  return perQuilt.flat().sort((a, b) => b.score - a.score).slice(0, k);
 }

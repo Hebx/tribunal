@@ -5,11 +5,15 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // Known public quilts holding Tribunal case law (verdict + case_law entries),
-// written by the verified full-e2e + memory-demo runs. The arena reads these so
-// "Case Law" reflects real accumulated precedent on Walrus.
+// written by `npm run seed-arena` in the SDK. These match the arena's subjective
+// battles so recall surfaces genuinely relevant precedent. The two trailing
+// quilts are from the verified full-e2e + memory-demo runs (Helios lineage).
 const SEED_QUILTS = [
-  "E0761R4PFVtil4qToPtI0B59-L5wvpkQecZdna8izfo",
-  "1plGkbwJibcmJgZy9CXL8ZtMPoPc9XjyJB_0dxo3yf0",
+  "nqhbOYetlCdhbdVfZ9hEzbI2l3TdIFLVEsJEJVipwqA", // milestone case law
+  "xGEPCPS0Uv0zbnwGCInMx5S9UIxndsDyActf4Pfd3Jg", // disclosure case law
+  "Fke1JGP9o6ZUKBPohX8V5uXhPVjGo0w9nsxZwgsrdOQ", // governance case law
+  "E0761R4PFVtil4qToPtI0B59-L5wvpkQecZdna8izfo", // Helios verdict (full-e2e)
+  "1plGkbwJibcmJgZy9CXL8ZtMPoPc9XjyJB_0dxo3yf0", // Helios case law (full-e2e)
 ];
 
 // POST /api/recall — semantic recall of public case law from Walrus memory.
