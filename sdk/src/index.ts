@@ -31,4 +31,11 @@ export {
   type ModelVote,
   type Verdict,
 } from "./memory/committee.js";
+export {
+  type SealAdapter,
+  PassthroughSeal,
+  AesSeal,
+  isSealed,
+  resolveSeal,
+} from "./memory/seal.js";
 export { loadEnv } from "./memory/env.js";

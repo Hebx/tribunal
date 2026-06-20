@@ -21,6 +21,7 @@
 
 import { WalrusStore, type QuiltEntryInput } from "./walrus.js";
 import { type Embedder, resolveEmbedder, cosine } from "./embeddings.js";
+import { type SealAdapter, PassthroughSeal } from "./seal.js";
 
 export type EntryKind =
   | "reasoning_trace"
@@ -65,6 +66,19 @@ export interface RecallHit {
 const enc = new TextEncoder();
 const dec = new TextDecoder();
 
+/**
+ * Confidentiality policy: which entry kinds are Seal-encrypted at rest on
+ * Walrus. Mirrors the on-chain `evidence::can_decrypt` rule — in-progress
+ * deliberation (votes, reasoning) is confidential to the resolver until the
+ * case settles; the final verdict and accumulated case law are PUBLICLY
+ * auditable (the transparency half of the thesis), so they stay readable.
+ */
+const CONFIDENTIAL_KINDS: ReadonlySet<EntryKind> = new Set<EntryKind>([
+  "committee_vote",
+  "reasoning_trace",
+  "evidence_note",
+]);
+
 /** Manifest entry written alongside the data entries so restore() is self-describing. */
 interface ManifestRow {
   id: string;
@@ -81,16 +95,46 @@ export class TribunalMemory {
     public readonly namespace: string,
     private readonly walrus: WalrusStore = new WalrusStore(),
     private readonly embedder: Embedder = resolveEmbedder(),
+    /**
+     * Encryption adapter for confidential entries. Defaults to passthrough so
+     * existing flows are unchanged; pass an AesSeal (or production Seal) to
+     * encrypt deliberation entries at rest on public Walrus.
+     */
+    private readonly seal: SealAdapter = new PassthroughSeal(),
   ) {}
 
   get embedderName(): string {
     return this.embedder.name;
   }
 
+  get sealName(): string {
+    return this.seal.name;
+  }
+
+  /** Seal identity for an entry: `${namespace}:${entryId}` (see evidence::is_prefix). */
+  private sealIdFor(entryId: string): string {
+    return `${this.namespace}:${entryId}`;
+  }
+
+  /** True if this entry kind is encrypted at rest under the confidentiality policy. */
+  private isConfidential(kind: EntryKind): boolean {
+    return this.seal.name !== "passthrough" && CONFIDENTIAL_KINDS.has(kind);
+  }
+
   /** Quilt identifiers must start alphanumeric and be unique within the quilt. */
   private patchIdentifier(entryId: string): string {
     const safe = entryId.replace(/[^a-zA-Z0-9_-]/g, "_");
     return /^[a-zA-Z0-9]/.test(safe) ? safe : `e_${safe}`;
+  }
+
+  /**
+   * Decode raw Walrus bytes into a MemoryEntry, transparently Seal-decrypting
+   * if the bytes carry the Tribunal-Seal envelope. Public entries (passthrough)
+   * decode directly; the adapter returns non-sealed bytes unchanged.
+   */
+  private async decodeEntry(bytes: Uint8Array, entryId: string): Promise<MemoryEntry> {
+    const plain = await this.seal.decrypt(bytes, this.sealIdFor(entryId));
+    return JSON.parse(dec.decode(plain)) as MemoryEntry;
   }
 
   /**
@@ -114,8 +158,13 @@ export class TribunalMemory {
         data: e.data ?? {},
         ts: e.ts ?? ts,
       };
-      // NOTE: entry bytes are opaque to Walrus — Seal-encrypt here in M3c-4.
-      quiltEntries.push({ identifier, data: enc.encode(JSON.stringify(payload)) });
+      // Confidential kinds are Seal-encrypted at rest; public kinds (verdict,
+      // case_law) stay readable on Walrus per the on-chain transparency policy.
+      let bytes: Uint8Array = enc.encode(JSON.stringify(payload));
+      if (this.isConfidential(e.kind)) {
+        bytes = await this.seal.encrypt(bytes, this.sealIdFor(e.id));
+      }
+      quiltEntries.push({ identifier, data: bytes });
       manifest.push({ id: e.id, kind: e.kind, identifier, ts: payload.ts });
     }
     // self-describing manifest (also lets restore work by quiltId alone)
@@ -169,7 +218,7 @@ export class TribunalMemory {
       const bytes = r.quiltPatchId
         ? await this.walrus.readPatch(r.quiltPatchId)
         : await this.walrus.readByIdentifier(r.quiltId, r.identifier);
-      const entry = JSON.parse(dec.decode(bytes)) as MemoryEntry;
+      const entry = await this.decodeEntry(bytes, r.id);
       hits.push({ score, entry, quiltId: r.quiltId, quiltPatchId: r.quiltPatchId });
     }
     return hits;
@@ -192,7 +241,7 @@ export class TribunalMemory {
       if (manifest.ns !== this.namespace) continue; // not ours
       for (const m of manifest.rows) {
         const bytes = await this.walrus.readByIdentifier(quiltId, m.identifier);
-        const entry = JSON.parse(dec.decode(bytes)) as MemoryEntry;
+        const entry = await this.decodeEntry(bytes, m.id);
         const embedding = await this.embedder.embed(entry.text);
         this.index.push({
           id: entry.id,
