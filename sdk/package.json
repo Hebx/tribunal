@@ -11,6 +11,7 @@
     "deploy": "node --import tsx scripts/deploy.ts",
     "e2e": "node --import tsx scripts/e2e.ts",
     "memory-demo": "node --import tsx scripts/memory-demo.ts",
+    "seed-arena": "node --import tsx scripts/seed-arena.ts",
     "full-e2e": "node --import tsx scripts/full-e2e.ts",
     "e2e:tests": "node --import tsx scripts/e2e-tests.ts"
   },
