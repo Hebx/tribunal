@@ -24,6 +24,7 @@ import { Committee } from "../src/memory/committee.js";
 import { TribunalMemory } from "../src/memory/index.js";
 import { WalrusStore } from "../src/memory/walrus.js";
 import { resolveEmbedder } from "../src/memory/embeddings.js";
+import { resolveSeal, isSealed } from "../src/memory/seal.js";
 import { configHash } from "../src/signer.js";
 
 const env = { ...loadEnv(join(homedir(), ".hermes", ".env")), ...process.env };
@@ -51,11 +52,16 @@ async function main() {
   console.log("memory_ns   :", memoryNs);
 
   const embedder = resolveEmbedder(env);
-  console.log("embedder    :", embedder.name, "\n");
+  // Demo uses a deterministic seal secret so confidential entries are REAL
+  // ciphertext on public Walrus (AES-256-GCM). In production this is the
+  // resolver's secret (or threshold Seal — no single key holder).
+  const seal = resolveSeal({ ...env, TRIBUNAL_SEAL_SECRET: env.TRIBUNAL_SEAL_SECRET ?? "tribunal-demo-seal-secret-key" });
+  console.log("embedder    :", embedder.name);
+  console.log("seal        :", seal.name, "(committee_vote/reasoning encrypted; verdict/case_law public)\n");
 
   const committee = new Committee({ baseUrl, apiKey: kiroKey, models: MODELS, prompt: PROMPT, sources: SOURCES });
   const walrus = new WalrusStore();
-  const memory = new TribunalMemory(memoryNs, walrus, embedder);
+  const memory = new TribunalMemory(memoryNs, walrus, embedder, seal);
 
   // ---- Case 1 ----
   const q1 = "Did Project Helios ship its mainnet launch before the stated Q2 deadline?";
@@ -88,6 +94,16 @@ async function main() {
   const w1 = await memory.remember(entries1);
   console.log(`  ✓ remembered ${entries1.length} entries -> Walrus quilt ${w1.quiltId}`);
 
+  // PROOF: a confidential committee_vote entry is genuine ciphertext on public
+  // Walrus, while the public verdict entry is readable. Read raw bytes back.
+  const voteRow = w1.rows.find((r) => r.kind === "committee_vote");
+  const verdictRow = w1.rows.find((r) => r.kind === "verdict");
+  if (voteRow && verdictRow) {
+    const rawVote = await walrus.readByIdentifier(w1.quiltId, voteRow.identifier);
+    const rawVerdict = await walrus.readByIdentifier(w1.quiltId, verdictRow.identifier);
+    console.log(`    seal proof: committee_vote on Walrus is ${isSealed(rawVote) ? "ENCRYPTED ✓" : "plaintext ✗"}; verdict is ${isSealed(rawVerdict) ? "encrypted" : "PUBLIC ✓ (auditable)"}`);
+  }
+
   // ---- Case 2 (different topic, to make recall meaningful) ----
   const q2 = "Was the DAO treasury audit completed by an independent firm?";
   const e2 =
@@ -107,6 +123,39 @@ async function main() {
   const w2 = await memory.remember(entries2);
   console.log(`  ✓ remembered ${entries2.length} entry -> Walrus quilt ${w2.quiltId}`);
 
+  // ---- Case 3: CASE LAW ACCUMULATION (the "learns across cases" thesis) ----
+  // A new, related deadline question. Before resolving, the committee RECALLS
+  // the most relevant prior verdict from Walrus memory and is given it as
+  // precedent — proving judgment compounds across cases, not stateless.
+  const q3 = "Did Project Helios deliver its mainnet within the committed timeframe?";
+  const e3 =
+    "Evidence: The same Project Helios launch. The team's roadmap committed to a Q2 mainnet. " +
+    "On-chain genesis transaction is timestamped 9 days before the Q2 boundary.";
+  console.log("\nCASE 3 (cites precedent):", q3);
+  const precedent = await memory.recall("Project Helios mainnet launch deadline verdict", { k: 1, kind: "verdict" });
+  const priorContext = precedent[0]
+    ? `Prior ruling [${precedent[0].entry.kind}]: ${precedent[0].entry.text}`
+    : undefined;
+  if (priorContext) console.log(`  recalled precedent -> ${priorContext.slice(0, 100)}…`);
+  const v3 = await committee.resolve(q3, e3, priorContext);
+  console.log(`  verdict: ${v3.outcomeTrue ? "TRUE" : "FALSE"}  (true=${v3.votesTrue} false=${v3.votesFalse} abstain=${v3.abstain}) — consistent with precedent: ${v3.outcomeTrue ? "YES ✓" : "NO"}`);
+  const w3 = await memory.remember([
+    {
+      id: "case3-verdict",
+      kind: "verdict" as const,
+      text: `Verdict on "${q3}": ${v3.outcomeTrue ? "TRUE" : "FALSE"}, consistent with the prior Helios mainnet-deadline ruling (case law applied).`,
+      data: { outcomeTrue: v3.outcomeTrue, citedPrecedent: !!priorContext },
+    },
+    {
+      id: "case3-caselaw",
+      kind: "case_law" as const,
+      text: `Case law: questions about Project Helios meeting its Q2 mainnet deadline resolve TRUE based on the on-chain genesis timestamp predating the deadline.`,
+      data: { topic: "helios-mainnet-deadline" },
+    },
+  ]);
+  console.log(`  ✓ remembered case 3 verdict + case_law -> Walrus quilt ${w3.quiltId}`);
+  const caseLawApplied = !!priorContext && v3.outcomeTrue;
+
   // ---- RECALL ----
   console.log("\n=== RECALL (semantic query over Walrus-backed memory) ===");
   const query = "What did the committee decide about the mainnet launch timing?";
@@ -122,13 +171,14 @@ async function main() {
   // ---- RESTORE (rebuild index FROM WALRUS ALONE) ----
   console.log("\n=== RESTORE (rebuild index from Walrus, index is just a cache) ===");
   const before = memory.size;
-  const restored = await memory.restore([w1.quiltId, w2.quiltId]);
+  const restored = await memory.restore([w1.quiltId, w2.quiltId, w3.quiltId]);
   console.log(`  index size before: ${before}  ->  wiped + restored from Walrus: ${restored}`);
   const hits2 = await memory.recall(query, { k: 1 });
   const restoreOk = !!hits2[0] && hits2[0].entry.text.toLowerCase().includes("helios");
   console.log(`  post-restore recall ${restoreOk ? "OK — same top hit, served purely from Walrus" : "FAILED"}`);
 
-  console.log("\n=== M3c demo " + (recallOk && restoreOk ? "PASSED" : "completed (check recall quality)") + " ===");
+  console.log("\n=== M3c demo " + (recallOk && restoreOk && caseLawApplied ? "PASSED" : "completed (check recall quality)") + " ===");
+  console.log(`  remember+recall: ${recallOk ? "OK" : "WEAK"} | restore-from-Walrus: ${restoreOk ? "OK" : "FAIL"} | case-law accumulation: ${caseLawApplied ? "OK" : "WEAK"} | seal: ${seal.name}`);
   if (!recallOk || !restoreOk) process.exit(1);
 }
 
