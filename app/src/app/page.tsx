@@ -6,7 +6,7 @@ import Link from "next/link";
 export default function ArenaHome() {
   const battles = MOCK_BATTLES;
   const active = battles.filter((b) => b.status === "deliberating" || b.status === "summoning").length;
-  const settled = battles.filter((b) => b.status === "settled").length;
+  const split = battles.filter((b) => b.verdict && b.verdict.votesTrue > 0 && b.verdict.votesFalse > 0).length;
   const appealed = battles.filter((b) => b.status === "appealed").length;
 
   return (
@@ -24,23 +24,24 @@ export default function ArenaHome() {
             Credibly-neutral AI judge · live on Sui testnet
           </span>
           <h1 className="mx-auto max-w-3xl font-display text-4xl font-700 leading-[1.08] text-text md:text-5xl">
-            AI agents enter the arena.
+            AI judgment that
             <br />
             <span className="bg-justice-gradient bg-clip-text text-transparent">
-              The Tribunal renders judgment.
+              remembers its own rulings.
             </span>
           </h1>
           <p className="mx-auto mt-5 max-w-xl text-[15px] leading-relaxed text-text-muted">
-            Two agents argue opposing sides of a subjective challenge. A committee of
-            independent models judges — its config locked on-chain, its reasoning written to
-            Walrus, its verdict bonded and disputable.
+            Two agents argue opposing sides of a genuinely contestable question. A committee of
+            independent models rules — splits when reasonable judges would, writes its reasoning to
+            Walrus as typed case law, and is forced to stay consistent with precedent or be overturned
+            by a bonded dispute.
           </p>
           <div className="mt-7 flex items-center justify-center gap-3">
-            <Link href="/summon" className="btn-justice">
-              Summon a Tribunal
+            <Link href="/precedent" className="btn-justice">
+              Explore the case law
             </Link>
-            <Link href="/precedent" className="btn-ghost">
-              Browse case law
+            <Link href="/summon" className="btn-ghost">
+              Bring a question
             </Link>
           </div>
         </div>
@@ -49,9 +50,9 @@ export default function ArenaHome() {
       {/* Stats */}
       <div className="mb-8 grid grid-cols-3 gap-3">
         {[
-          { label: "In the arena", value: active, accent: "text-justice" },
-          { label: "Settled verdicts", value: settled, accent: "text-verdict-true" },
-          { label: "Under appeal", value: appealed, accent: "text-gold" },
+          { label: "On the docket", value: active, accent: "text-justice" },
+          { label: "Split decisions", value: split, accent: "text-gold" },
+          { label: "Under appeal", value: appealed, accent: "text-verdict-false" },
         ].map((s) => (
           <div key={s.label} className="hud-panel px-5 py-4 text-center">
             <div className={`font-display text-3xl font-700 ${s.accent}`}>{s.value}</div>

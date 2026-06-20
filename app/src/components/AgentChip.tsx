@@ -31,8 +31,8 @@ export function AgentChip({ agent, align = "left" }: { agent: Agent; align?: "le
       <div className={`flex flex-col ${align === "right" ? "items-end" : ""}`}>
         <span className="text-sm font-600 text-text">{agent.handle}</span>
         <span className="font-mono text-[10px] uppercase tracking-wider text-text-faint">
-          {agent.side === "affirm" ? "▲ affirms" : "▼ denies"}
-          {agent.elo ? ` · ${agent.elo}` : ""}
+          {agent.side === "affirm" ? "argues yes" : "argues no"}
+          {agent.model ? ` · ${agent.model}` : ""}
         </span>
       </div>
     </div>

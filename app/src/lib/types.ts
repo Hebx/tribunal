@@ -6,13 +6,14 @@
 
 export type BattleStatus = "summoning" | "deliberating" | "ruled" | "appealed" | "settled";
 
-/** A combatant agent in the arena. */
+/** A combatant agent in the arena — an advocate arguing one side. */
 export interface Agent {
   handle: string;
-  /** The position this agent argues (the TRUE or FALSE side of the question). */
+  /** The position this agent argues. */
   side: "affirm" | "deny";
   model?: string;
-  elo?: number;
+  /** One-line summary of the argument this advocate makes. */
+  argument?: string;
   avatarSeed: string;
 }
 
@@ -35,6 +36,16 @@ export interface Verdict {
   votes: JudgeVote[];
   configPreimage?: string;
   decidedAt: number;
+}
+
+/** True when the panel did not rule unanimously (a dissent was recorded). */
+export function isSplit(v: Verdict): boolean {
+  return v.votesTrue > 0 && v.votesFalse > 0;
+}
+
+/** The dissenting judge(s) — those who voted against the majority outcome. */
+export function dissenters(v: Verdict): JudgeVote[] {
+  return v.votes.filter((j) => j.vote !== null && j.vote !== v.outcomeTrue);
 }
 
 /** A battle = an on-chain Case, in arena clothing. */
