@@ -78,12 +78,19 @@ export class Committee {
     return `${this.cfg.models.join(",")}|${this.cfg.prompt}|${this.cfg.sources}`;
   }
 
-  private async askOne(model: string, question: string, evidence: string): Promise<ModelVote> {
+  private async askOne(model: string, question: string, evidence: string, priorContext?: string): Promise<ModelVote> {
+    const userParts = [`Question: ${question}`, `\nEvidence:\n${evidence}`];
+    if (priorContext && priorContext.trim()) {
+      userParts.push(
+        `\nRelevant prior case law (precedent from this tribunal's settled cases — ` +
+        `weigh it for consistency, but the current evidence governs):\n${priorContext}`,
+      );
+    }
     const body = {
       model,
       messages: [
         { role: "system", content: VOTE_SYSTEM(this.cfg.prompt, this.cfg.sources) },
-        { role: "user", content: `Question: ${question}\n\nEvidence:\n${evidence}` },
+        { role: "user", content: userParts.join("\n") },
       ],
       max_tokens: 400,
       temperature: 0,
@@ -107,8 +114,8 @@ export class Committee {
   }
 
   /** Run the full panel in parallel and aggregate to a verdict. */
-  async resolve(question: string, evidence: string): Promise<Verdict> {
-    const votes = await Promise.all(this.cfg.models.map((m) => this.askOne(m, question, evidence)));
+  async resolve(question: string, evidence: string, priorContext?: string): Promise<Verdict> {
+    const votes = await Promise.all(this.cfg.models.map((m) => this.askOne(m, question, evidence, priorContext)));
     let votesTrue = 0, votesFalse = 0, abstain = 0;
     for (const v of votes) {
       if (v.vote === true) votesTrue++;
