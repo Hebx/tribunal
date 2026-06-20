@@ -110,10 +110,11 @@ export const MOCK_BATTLES: Battle[] = [
     txDigests: [{ label: "create", digest: "FXt7ioDisclosureCreateDigestPlaceholderXXXX" }],
   },
 
-  // ---- Deliberating: governance interpretation ----
+  // ---- Ruled, on-chain, DISPUTABLE (live dispute window open on testnet) ----
   {
     id: "battle-governance",
-    status: "deliberating",
+    caseId: "0xe2952a3c4dccf2bcd12b2efc39c309946f828dcd457257ac527ecbefe8e85647",
+    status: "ruled",
     challenge:
       "Does Proposal #42 fall within the treasury committee's delegated authority, or does it require a full-DAO vote under the charter?",
     criteria:
@@ -134,10 +135,29 @@ export const MOCK_BATTLES: Battle[] = [
       argument: "A 6-month strategic MM arrangement is not 'routine operational spending'; it's a new commitment that needs the full DAO.",
       avatarSeed: "intentfirst",
     },
-    bondSui: 0.25,
-    configHashHex: "7b3c91aa20ee14d0",
-    memoryNs: "walrus-ns://tribunal/governance-3",
+    bondSui: 0.1,
+    configHashHex: "c53b77d1ba569ae10727bc59f9749f39",
+    memoryNs: "walrus-ns://tribunal/governance-live",
+    citedPrecedent: false,
+    verdict: {
+      outcomeTrue: false,
+      votesTrue: 1,
+      votesFalse: 2,
+      abstain: 0,
+      agreement: 0.67,
+      decidedAt: now - 0.3 * hourMs,
+      votes: [
+        { model: "minimax-m2.5", vote: true, confidence: 0.62, rationale: "45k is under the 50k delegated cap. On the text, the committee is authorized to act." },
+        { model: "claude-sonnet-4.5", vote: false, confidence: 0.74, rationale: "A 6-month market-maker arrangement is a new strategic commitment, not routine opex. Purpose, not just amount, defines the delegation boundary." },
+        { model: "claude-haiku-4.5", vote: false, confidence: 0.68, rationale: "'Routine operational spending' does not naturally cover a one-time strategic liquidity deal. The ambiguity should resolve to the full DAO." },
+      ],
+    },
     createdAt: now - 0.4 * hourMs,
+    disputeWindowEndsAt: now + 40 * hourMs,
+    txDigests: [
+      { label: "create", digest: "FwSTruts2gUAsERmL7epXgVjPpfWerHjTcmDaoTg8rcC" },
+      { label: "assert", digest: "8JkQC7f6R2jAVk5FAWW6WXq3tdGeABcPHettPKUF3LHQ" },
+    ],
   },
 
   // ---- Summoning: content-policy edge case ----
