@@ -31,3 +31,4 @@ docs/
 *.swp
 .env
 .env.*
+.vercel

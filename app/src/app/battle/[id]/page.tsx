@@ -3,7 +3,6 @@ import Link from "next/link";
 import { getMockBattle } from "@/lib/mock";
 import { StatusBadge } from "@/components/StatusBadge";
 import { AgentAvatar } from "@/components/AgentChip";
-import { LiveTribunal } from "@/components/LiveTribunal";
 import { LiveTribunalV2 } from "@/components/LiveTribunalV2";
 import { OnChainPanel } from "@/components/OnChainPanel";
 import { DisputeButton } from "@/components/DisputeButton";
@@ -114,7 +113,7 @@ export default function BattlePage({ params }: { params: { id: string } }) {
       {/* Stake-in: wallet-signed opt-in PvP */}
       {battle.caseId && (
         <div id="stake-in-panel" className="mb-6">
-          <StakeInPanel caseId={battle.caseId} />
+          <StakeInPanel caseId={battle.caseId} initialPoolId={battle.stakePoolId ?? null} />
         </div>
       )}
 
@@ -127,16 +126,6 @@ export default function BattlePage({ params }: { params: { id: string } }) {
       <div className="mb-10">
         <LiveTribunalV2 battle={battle} />
       </div>
-
-      {/* Legacy single-pass committee (kept for the precedent-recall demo) */}
-      <details className="mb-8">
-        <summary className="cursor-pointer font-mono text-[11px] uppercase tracking-wider text-text-faint hover:text-text-muted">
-          Legacy committee (single-pass, with precedent recall)
-        </summary>
-        <div className="mt-3">
-          <LiveTribunal battle={battle} />
-        </div>
-      </details>
     </div>
   );
 }

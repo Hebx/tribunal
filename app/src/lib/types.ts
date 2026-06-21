@@ -53,6 +53,8 @@ export interface Battle {
   id: string;
   /** On-chain Case object id (when created). */
   caseId?: string;
+  /** On-chain StakePool object id, if a pool has been created for this case. */
+  stakePoolId?: string;
   status: BattleStatus;
   challenge: string; // the subjective yes/no question
   criteria: string; // resolution criteria

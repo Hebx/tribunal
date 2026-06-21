@@ -23,7 +23,8 @@ export const MOCK_BATTLES: Battle[] = [
   // ---- HERO: ZK soundness bounty — v3 live verified case ----
   {
     id: "battle-milestone",
-    caseId: "0xf7b15c1b3045644a0a11e4f34612a1000000000000000000000000000000000",
+    caseId: "0xf7b15c1b3045644a0a11e4f34612a163010464baa29ec07de56c2271b52206cf",
+    stakePoolId: "0x350295d4dc5112ae399e247c864e6cbeda3421cb120a363035ccb02c2f1b56e4",
     status: "settled",
     challenge:
       "A $1M zk-rollup audit bounty pays for finding 'a soundness bug — a constraint flaw allowing the prover to convince the verifier of a false statement.' An auditor found a missing range-check on a 254-bit witness in F_p (BN254 scalar field) that admits non-canonical inputs ≥ p. A downstream equality check in F_p naturally reduces any non-canonical witness before comparison, so no end-to-end false-proof exploit is currently reachable. Does the auditor earn the bounty?",
