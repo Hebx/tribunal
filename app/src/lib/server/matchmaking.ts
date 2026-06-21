@@ -1,10 +1,19 @@
-// Matchmaking — pair an affirmer + denier for a case.
+// Matchmaking — derive the case matchup from on-chain stake state.
 //
-// Primary path: agents opt in and stake on a side. If both sides have at least
-// one staker, we pick the highest-reputation staker per side (skin-in-the-game
-// PvP). Fallback: if a side has no staker, conscript an agent from the pool
-// (jury-duty style) so a case never stalls. Conscription uses a seedable RNG so
-// selection is deterministic in tests; on-chain this maps to sui::random.
+// v3 rule (no autonomous matching): the first wallet to stake YES becomes the
+// YES advocate; first to stake NO becomes the NO advocate. Set on-chain in
+// `stake.move::stake()` and recorded as `advocate_yes_id`/`advocate_no_id`.
+// Remaining stakers on either side are *backers* — they share winnings, do
+// not argue.
+//
+// pickAdvocates() refuses to return a matchup when either advocate slot is
+// unset — the case stays in `summoning` until both sides have a staker.
+// This is the explicit replacement for v2 conscription/jury-duty fallback.
+//
+// Reputation is reserved for two things, neither of which is matchmaking:
+//   1. the public leaderboard
+//   2. juror selection (top-rep, archetype-distinct from both advocates;
+//      implemented in select-jury.ts)
 
 import type { Side } from "./debate";
 
@@ -12,88 +21,85 @@ export interface PoolAgent {
   agentId: string; // AgentCard object id
   handle: string;
   score: number; // on-chain reputation score
+  archetypeId?: string;
 }
 
 export interface Stake {
   agent: PoolAgent;
   side: Side;
+  /** Stake amount in MIST. */
+  amount?: bigint;
+  /** Claim weight in MIST (=amount × 3 for advocate, =amount for backer). */
+  weight?: bigint;
+  /** True iff this stake was the first on its side (carries advocate role). */
+  isAdvocate?: boolean;
 }
 
 export interface Matchup {
-  affirmer: PoolAgent; // argues YES
-  denier: PoolAgent; // argues NO
-  conscripted: Side[]; // which sides were filled by conscription (not opt-in)
+  /** YES advocate — the first wallet to stake YES. */
+  affirmer: PoolAgent;
+  /** NO advocate — the first wallet to stake NO. */
+  denier: PoolAgent;
+  /** Backers on each side, in stake order (not used for argument, share winnings). */
+  backers: { yes: PoolAgent[]; no: PoolAgent[] };
 }
 
-/** Deterministic RNG (mulberry32) — same seed → same sequence. */
-function rng(seed: number): () => number {
-  let s = seed >>> 0;
-  return () => {
-    s = (s + 0x6d2b79f5) >>> 0;
-    let t = s;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-function topByScore(stakes: Stake[], side: Side): PoolAgent | undefined {
-  const onSide = stakes.filter((s) => s.side === side).map((s) => s.agent);
-  if (onSide.length === 0) return undefined;
-  return onSide.sort((a, b) => b.score - a.score)[0];
-}
-
-/**
- * Conscript one agent from `pool`, excluding `exclude` ids. Reputation-weighted
- * random pick (higher score = higher chance) for fairness + quality. Returns
- * undefined if no eligible agent remains.
- */
-export function conscript(
-  pool: PoolAgent[],
-  exclude: string[],
-  seed: number,
-): PoolAgent | undefined {
-  const eligible = pool.filter((a) => !exclude.includes(a.agentId));
-  if (eligible.length === 0) return undefined;
-  const total = eligible.reduce((acc, a) => acc + Math.max(1, a.score), 0);
-  const r = rng(seed)() * total;
-  let cum = 0;
-  for (const a of eligible) {
-    cum += Math.max(1, a.score);
-    if (r < cum) return a;
+/** Thrown when a case has at least one side with no staker. */
+export class BothSidesMustStake extends Error {
+  constructor(public emptySides: Side[]) {
+    super(`Both sides must have a staked advocate; missing: ${emptySides.join(", ")}`);
+    this.name = "BothSidesMustStake";
   }
-  return eligible[eligible.length - 1];
 }
 
 /**
- * Build a matchup from opted-in stakes, conscripting from the pool for any
- * empty side. Throws if a side cannot be filled (no stakers, empty pool).
+ * Match a case from chain state. `advocateYesId` and `advocateNoId` are the
+ * `Option<ID>` projections of `StakePool.advocate_yes`/`advocate_no` after
+ * decoding (see sdk/staker-list). `stakers` is the parallel list of every
+ * stake call (advocate + backers, both sides). `pool` is the global
+ * `AgentCard` set we resolve ids against so the returned matchup carries
+ * full agent metadata (handle, score, archetype).
+ *
+ * Throws BothSidesMustStake when either advocate slot is unset.
  */
-export function matchSides(stakes: Stake[], pool: PoolAgent[], seed = 1): Matchup {
-  const conscripted: Side[] = [];
+export function pickAdvocates(
+  advocateYesId: string | null,
+  advocateNoId: string | null,
+  stakers: Stake[],
+  pool: PoolAgent[],
+): Matchup {
+  const empty: Side[] = [];
+  if (!advocateYesId) empty.push("yes");
+  if (!advocateNoId) empty.push("no");
+  if (empty.length > 0) throw new BothSidesMustStake(empty);
 
-  let affirmer = topByScore(stakes, "yes");
-  let denier = topByScore(stakes, "no");
+  const findAgent = (id: string): PoolAgent | undefined =>
+    pool.find((a) => a.agentId === id);
 
-  const excluded: string[] = [];
-  if (affirmer) excluded.push(affirmer.agentId);
-  if (denier) excluded.push(denier.agentId);
-
+  const affirmer = findAgent(advocateYesId!);
+  const denier = findAgent(advocateNoId!);
   if (!affirmer) {
-    affirmer = conscript(pool, excluded, seed);
-    if (!affirmer) throw new Error("cannot fill YES side: no staker and no eligible pool agent");
-    excluded.push(affirmer.agentId);
-    conscripted.push("yes");
+    throw new Error(`advocate YES (${advocateYesId}) not in agent pool`);
   }
   if (!denier) {
-    denier = conscript(pool, excluded, seed + 1);
-    if (!denier) throw new Error("cannot fill NO side: no staker and no eligible pool agent");
-    excluded.push(denier.agentId);
-    conscripted.push("no");
+    throw new Error(`advocate NO (${advocateNoId}) not in agent pool`);
+  }
+  if (affirmer.agentId === denier.agentId) {
+    throw new Error("affirmer and denier are the same agent");
   }
 
-  if (affirmer.agentId === denier.agentId) {
-    throw new Error("affirmer and denier resolved to the same agent");
-  }
-  return { affirmer, denier, conscripted };
+  const backerOnSide = (side: Side, advocateId: string): PoolAgent[] =>
+    stakers
+      .filter((s) => s.side === side && s.agent.agentId !== advocateId)
+      .map((s) => findAgent(s.agent.agentId))
+      .filter((a): a is PoolAgent => !!a);
+
+  return {
+    affirmer,
+    denier,
+    backers: {
+      yes: backerOnSide("yes", advocateYesId!),
+      no: backerOnSide("no", advocateNoId!),
+    },
+  };
 }
