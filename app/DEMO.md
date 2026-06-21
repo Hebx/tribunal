@@ -37,17 +37,26 @@ bounty's plain text demands a verifier-accepted false proof, and none exists.
 > in different places — and that's the signal. A single oracle hides it; we
 > surface it, then a guardrail judge makes the binding call."*
 
-### Beat 3 — Memory is the moat (45s)
-Go to **Case Law**. Search `zk soundness reachable exploit`.
-The top hit is a prior tribunal ruling on the same frame question, **recalled
-from Walrus** — typed `case_law`, not chat logs, with a relevance score and the
-Walrus quilt it came from.
+### Beat 3 — The audit trail is the moat (45s)
+Scroll to **Audit Trail** under the verdict. Six typed Quilt entries land on
+Walrus for every case: `debate · jury · guardrail · verdict · case_law ·
+provenance`. Click `provenance` → patch id is copy-able, aggregator link
+opens the raw entry. Expand the provenance block in the panel: it lists each
+advocate (with `isFirstStaker: true, weight: 3`), each backer, each juror
+with archetype + seed, the model map, gateway temperatures, both
+configHashes (`configHashHex` for the resolver stack, `guardrailConfigHash`
+for the judge's locked prompt), and the resolver commit.
 
-> *"Every ruling becomes typed precedent on Walrus — verdict, jury deliberation,
-> guardrail decision, debate transcript. Verdicts and case law are public and
-> auditable; the deliberation behind them is Seal-encrypted until the case
-> settles. This is what generic chat-memory clones won't have: judgment that
-> compounds."*
+> *"This is the v3 audit chain. caseId → Quilt → six typed entries → re-run
+> with the pinned hashes and commit, and you get the same verdict. That's
+> reproducibility, not vibes. And it compounds — go to Case Law, search
+> `zk soundness reachable exploit`, the top hit is a prior tribunal ruling
+> on the same frame question, recalled from Walrus by semantic match."*
+
+Note for the audience: deliberation entries (`debate_transcript` +
+`jury_deliberation`) are **sealed until settle** — they decrypt only under
+the on-chain `seal_approve` predicate. The verdict, case_law, guardrail
+ruling, and provenance are **public the moment the case settles**.
 
 ### Beat 4 — Dispute is summoning a counter-agent (45s)
 Back on the battle page, click **"Dispute → recall precedent"** (legacy committee)
@@ -83,13 +92,18 @@ chip → real SuiScan transaction from the verified end-to-end run.
 - App: `cd app && pnpm dev`.
 
 ## The three differentiators (repeat at the close)
-1. **Persona-diverse judgment** — diversity comes from lenses, not from
-   correlated model priors.
-2. **Typed case law on Walrus** — verdict + jury + guardrail + debate, each
-   typed, each individually recallable.
-3. **Bonded dispute** that summons a counter-agent and can overturn a ruling
-   on-chain.
+1. **Stake-gated, first-staker advocacy** — the protocol picks advocates by
+   conviction (whoever stakes first on each side argues that side and gets a
+   3× share of the losing pool). No matchmaker, no fallback.
+2. **Persona-diverse judgment** — diversity comes from lenses, not from
+   correlated model priors. The dissent is preserved on Walrus.
+3. **Six-entry typed audit trail on Walrus** — `debate · jury · guardrail ·
+   verdict · case_law · provenance`. Replay with the pinned configHashes +
+   resolverCommit, get the same verdict.
 
-## One-liner for the submission
+Bonded dispute is the safety net: summons a counter-agent, can overturn the
+ruling on-chain.
+
+## One-liner
 *"Tribunal turns AI debate into accountable, disputable, self-remembering case
 law on Sui + Walrus."*

@@ -1,14 +1,13 @@
 [package]
 name = "tribunal"
 edition = "2024"
-# Sui Overflow 2026 · Walrus track · Glorian Labs
-# Multi-agent AI arbiter with verifiable, persistent memory on Walrus.
+# Tribunal — judicial layer for agent societies on Sui.
+# Verifiable, persistent case law on Walrus.
 
 [dependencies]
-# Sui framework + MoveStdlib are resolved from the system genesis deps
-# (sui 1.72.5). Walrus / Seal package deps are added when wiring the
-# on-chain certification check (M2) — kept out of M1 so the core
-# lifecycle builds against the framework alone.
+# Sui framework + MoveStdlib are resolved from the system genesis deps.
+# Walrus / Seal package deps are added at the on-chain certification
+# integration point; the core lifecycle builds against the framework alone.
 
 [addresses]
 tribunal = "0x0"
