@@ -91,7 +91,7 @@ export function LiveTribunal({ battle }: { battle: Battle }) {
         </div>
         <div className="flex gap-2">
           <button onClick={() => summon(false)} disabled={loading} className="btn-ghost">
-            {loading && !reconvened ? "Deliberating…" : verdict ? "Re-judge" : "Convene the bench"}
+            {loading && !reconvened ? "Deliberating…" : verdict ? "Re-judge" : "Convene the panel"}
           </button>
           <button onClick={() => summon(true)} disabled={loading} className="btn-justice" title="Re-run as a dispute: recall prior case law and judge with precedent">
             {loading && reconvened ? "Reconvening…" : "Dispute → recall precedent"}
@@ -143,7 +143,7 @@ export function LiveTribunal({ battle }: { battle: Battle }) {
             </div>
             {split && (
               <p className="mx-auto mt-3 max-w-xl text-[12px] leading-relaxed text-text-faint">
-                A reasonable bench disagreed — which is exactly why judgment here needs a committee
+                A reasonable panel disagreed — which is exactly why judgment here needs a committee
                 and a dispute path, not a single verdict.
               </p>
             )}
