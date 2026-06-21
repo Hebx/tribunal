@@ -1,6 +1,6 @@
 "use client";
 
-// LiveTribunal v2 — the persona-debate panel (v3 stake-gated).
+// LiveTribunal — persona-debate panel (v3 stake-gated).
 //
 // Hits POST /api/resolve with `{ caseId, rounds }`. The server resolves the
 // matchup, jury, and personas from on-chain state — this component no longer

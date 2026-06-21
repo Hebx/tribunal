@@ -1,4 +1,4 @@
-// Server-side helpers for the v2 agent leaderboard + profile pages.
+// Server-side helpers for the agent leaderboard + profile pages.
 //
 // Reads on-chain reputation by walking the `AgentRegistered` event stream for
 // the deployed package, then fetching each AgentCard object for its current

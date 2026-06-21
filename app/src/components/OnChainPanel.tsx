@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { Battle } from "@/lib/types";
 
 // Honest disclosure of what's actually on-chain vs Walrus vs UI. Credibility >
-// looking maximally decentralized. Verified against move/sources (v2 deployment).
+// looking maximally decentralized. Verified against move/sources (v3 deployment).
 const ROWS: { field: string; where: "chain" | "walrus" | "ui" }[] = [
   // ---- on-chain: identity + verdict + bond + stake + reputation ----
   { field: "Soulbound AgentCard + persona hash", where: "chain" },

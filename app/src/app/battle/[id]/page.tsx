@@ -4,6 +4,7 @@ import { getMockBattle } from "@/lib/mock";
 import { StatusBadge } from "@/components/StatusBadge";
 import { AgentAvatar } from "@/components/AgentChip";
 import { LiveTribunalV2 } from "@/components/LiveTribunalV2";
+import { FullHash } from "@/components/Hash";
 import { OnChainPanel } from "@/components/OnChainPanel";
 import { DisputeButton } from "@/components/DisputeButton";
 import { StakeInPanel } from "@/components/StakeInPanel";
@@ -88,22 +89,51 @@ export default function BattlePage({ params }: { params: { id: string } }) {
       {/* On-chain / Walrus chips */}
       <div className="mb-3 flex flex-wrap items-center gap-2">
         {battle.caseId && (
-          <a href={explorerObject(battle.caseId)} target="_blank" rel="noreferrer" className="chip-mono hover:border-justice/60 hover:text-justice">
+          <a href={explorerObject(battle.caseId)} target="_blank" rel="noreferrer" className="chip-mono hover:border-justice/60 hover:text-justice" title={battle.caseId}>
             case {battle.caseId.slice(0, 10)}… ↗
           </a>
         )}
         {battle.evidenceQuiltId && (
-          <span className="chip-mono" title="Walrus evidence quilt (committee reasoning)">
+          <span className="chip-mono" title={`Walrus evidence quilt · ${battle.evidenceQuiltId}`}>
             walrus {battle.evidenceQuiltId.slice(0, 12)}…
           </span>
         )}
         {battle.citedPrecedent && <span className="chip-mono border-justice/40 text-justice">⚖ cited precedent</span>}
         {(battle.txDigests ?? []).map((t) => (
-          <a key={t.digest} href={explorerTx(t.digest)} target="_blank" rel="noreferrer" className="chip-mono hover:border-justice/60 hover:text-justice">
+          <a key={t.digest} href={explorerTx(t.digest)} target="_blank" rel="noreferrer" className="chip-mono hover:border-justice/60 hover:text-justice" title={t.digest}>
             {t.label} {t.digest.slice(0, 8)}… ↗
           </a>
         ))}
       </div>
+
+      {/* Full on-chain / Walrus references (always reveal — provenance is the product). */}
+      {(battle.caseId || battle.evidenceQuiltId || battle.stakePoolId || (battle.txDigests?.length ?? 0) > 0 || battle.configHashHex || battle.memoryNs) && (
+        <details className="hud-panel mb-6 px-5 py-3 text-sm" open>
+          <summary className="cursor-pointer font-mono text-[11px] uppercase tracking-wider text-text-faint hover:text-text-muted">
+            full on-chain references (copyable)
+          </summary>
+          <div className="mt-4 grid grid-cols-1 gap-4">
+            {battle.caseId && (
+              <FullHash label="case object" value={battle.caseId} href={explorerObject(battle.caseId)} />
+            )}
+            {battle.stakePoolId && (
+              <FullHash label="stake pool" value={battle.stakePoolId} href={explorerObject(battle.stakePoolId)} />
+            )}
+            {battle.evidenceQuiltId && (
+              <FullHash label="walrus evidence quilt" value={battle.evidenceQuiltId} />
+            )}
+            {battle.configHashHex && (
+              <FullHash label="resolver config hash" value={battle.configHashHex} />
+            )}
+            {battle.memoryNs && (
+              <FullHash label="memory namespace" value={battle.memoryNs} />
+            )}
+            {(battle.txDigests ?? []).map((t) => (
+              <FullHash key={t.digest} label={`tx · ${t.label}`} value={t.digest} href={explorerTx(t.digest)} />
+            ))}
+          </div>
+        </details>
+      )}
 
       {/* Honest on-chain / off-chain disclosure */}
       <div className="mb-6">

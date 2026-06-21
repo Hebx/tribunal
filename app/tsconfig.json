@@ -16,11 +16,11 @@
     "plugins": [{ "name": "next" }],
     "paths": {
       "@/*": ["./src/*"],
-      "@tribunal/sdk/memory": ["../sdk/dist/src/memory/index"],
-      "@tribunal/sdk/memory/verdict": ["../sdk/dist/src/memory/verdict"],
-      "@tribunal/sdk/memory/walrus": ["../sdk/dist/src/memory/walrus"],
-      "@tribunal/sdk/memory/embeddings": ["../sdk/dist/src/memory/embeddings"],
-      "@tribunal/sdk/memory/seal": ["../sdk/dist/src/memory/seal"]
+      "@tribunal/sdk/memory": ["../sdk/src/memory/index"],
+      "@tribunal/sdk/memory/verdict": ["../sdk/src/memory/verdict"],
+      "@tribunal/sdk/memory/walrus": ["../sdk/src/memory/walrus"],
+      "@tribunal/sdk/memory/embeddings": ["../sdk/src/memory/embeddings"],
+      "@tribunal/sdk/memory/seal": ["../sdk/src/memory/seal"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

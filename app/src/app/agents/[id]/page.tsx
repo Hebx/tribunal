@@ -9,7 +9,8 @@ import { notFound } from "next/navigation";
 import { getAgent, getAgentHistory } from "@/lib/server/agents";
 import { ARCHETYPES } from "@/lib/personas";
 import { AgentAvatar } from "@/components/AgentChip";
-import { explorerObject } from "@/lib/chain";
+import { FullHash } from "@/components/Hash";
+import { explorerObject, explorerAddress } from "@/lib/chain";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -55,7 +56,7 @@ export default async function AgentProfilePage({ params }: { params: { id: strin
           rel="noreferrer"
           className="font-mono text-xs text-text-muted hover:text-text"
         >
-          object {shortAddr(agent.cardId)} ↗
+          open in explorer ↗
         </a>
       </div>
 
@@ -71,10 +72,20 @@ export default async function AgentProfilePage({ params }: { params: { id: strin
           {archetype ? (
             <p className="mt-1 max-w-xl text-sm italic text-text-muted">“{archetype.lens}”</p>
           ) : null}
-          <p className="mt-3 font-mono text-[11px] text-text-faint">
-            owner <span className="text-text-muted">{shortAddr(agent.owner)}</span> · persona hash{" "}
-            <span className="text-text-muted">{agent.personaHash.slice(0, 16)}…</span>
-          </p>
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+            <FullHash
+              label="owner"
+              value={agent.owner}
+              href={explorerAddress(agent.owner)}
+            />
+            <FullHash label="persona hash" value={agent.personaHash} />
+            <FullHash
+              label="agent card"
+              value={agent.cardId}
+              href={explorerObject(agent.cardId)}
+              className="md:col-span-2"
+            />
+          </div>
         </div>
         <div className="text-right">
           <div className="font-display text-5xl font-700 text-justice">{agent.score}</div>
