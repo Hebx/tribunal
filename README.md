@@ -65,11 +65,11 @@ court produces it, Walrus remembers it.
 ╚══════════════════════════════════════════════════════════════════════╝
 ```
 
-| Layer | Role | Custody | Proven on |
-|---|---|:---:|---|
-| **1 · Court** | produces the verdict | none | local + testnet end-to-end run |
-| **2 · Memory** | remembers it | none | Walrus testnet, 6/6 typed patches landed |
-| **3 · Anchor** | makes it tamper-evident | bonded resolver stake | live testnet — every digest in `DEPLOYMENTS.md` |
+| Layer | Role | Backed by | Proven on |
+|---|---|---|---|
+| **1 · Court** | produces the verdict | sha256-pinned guardrail prompt + curated personas, never free text | local + testnet end-to-end run |
+| **2 · Memory** | remembers it | typed Move-Quilt schema, seal-gated visibility | Walrus testnet, 6/6 typed patches landed |
+| **3 · Anchor** | makes it tamper-evident | atomic tx + bonded dispute window + 3×-weighted claims | live testnet — every digest in `DEPLOYMENTS.md` |
 
 ---
 
