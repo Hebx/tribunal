@@ -74,10 +74,19 @@ async function main() {
   ) as { objectId: string } | undefined;
   if (!creatorCap) throw new Error("CaseCreatorCap not found in object changes");
 
+  const reputationCap = changes.find(
+    (c) =>
+      c.type === "created" &&
+      typeof (c as any).objectType === "string" &&
+      (c as any).objectType.endsWith("::identity::ReputationCap"),
+  ) as { objectId: string } | undefined;
+  if (!reputationCap) throw new Error("ReputationCap not found in object changes");
+
   const deployment: TribunalDeployment = {
     network: NETWORK,
     packageId,
     creatorCapId: creatorCap.objectId,
+    reputationCapId: reputationCap.objectId,
     publishedAt: new Date().toISOString(),
     digest: res.digest,
   };
@@ -85,10 +94,11 @@ async function main() {
   writeFileSync(outPath, JSON.stringify(deployment, null, 2) + "\n");
 
   console.log("\n=== Deployed ===");
-  console.log(`packageId    : ${packageId}`);
-  console.log(`creatorCapId : ${creatorCap.objectId}`);
-  console.log(`digest       : ${res.digest}`);
-  console.log(`written      : ${outPath}`);
+  console.log(`packageId     : ${packageId}`);
+  console.log(`creatorCapId  : ${creatorCap.objectId}`);
+  console.log(`reputationCapId: ${reputationCap.objectId}`);
+  console.log(`digest        : ${res.digest}`);
+  console.log(`written       : ${outPath}`);
 }
 
 main().catch((e) => {

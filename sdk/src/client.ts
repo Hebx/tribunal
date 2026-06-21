@@ -19,6 +19,13 @@ import {
 } from "./types.js";
 
 const toU8 = (b: Uint8Array) => Array.from(b);
+const hexToBytes = (hex: string): Uint8Array => {
+  const h = hex.startsWith("0x") ? hex.slice(2) : hex;
+  if (h.length % 2 !== 0) throw new Error("invalid hex length");
+  const out = new Uint8Array(h.length / 2);
+  for (let i = 0; i < out.length; i++) out[i] = parseInt(h.slice(i * 2, i * 2 + 2), 16);
+  return out;
+};
 
 export class TribunalClient {
   constructor(
@@ -157,6 +164,57 @@ export class TribunalClient {
       ],
     });
     return tx;
+  }
+
+  // ----- identity / reputation (v2) -----
+
+  /**
+   * identity::register_agent(archetype_id, persona_hash, ctx) -> ID
+   * Mints a soulbound AgentCard to the signer. `personaHash` is the hex sha256
+   * from composePersona; stored on-chain so the persona is tamper-evident.
+   */
+  registerAgent(archetypeId: string, personaHashHex: string): Transaction {
+    const tx = new Transaction();
+    tx.moveCall({
+      target: `${this.packageId}::identity::register_agent`,
+      arguments: [
+        tx.pure(bcs.vector(bcs.u8()).serialize(toU8(new TextEncoder().encode(archetypeId)))),
+        tx.pure(bcs.vector(bcs.u8()).serialize(toU8(hexToBytes(personaHashHex)))),
+      ],
+    });
+    return tx;
+  }
+
+  /**
+   * identity::record_outcome(cap, card, won, overturned, ctx)
+   * ReputationCap-gated — only the resolver can score an agent.
+   */
+  recordOutcome(
+    reputationCapId: string,
+    agentCardId: string,
+    won: boolean,
+    overturned: boolean,
+  ): Transaction {
+    const tx = new Transaction();
+    tx.moveCall({
+      target: `${this.packageId}::identity::record_outcome`,
+      arguments: [
+        tx.object(reputationCapId),
+        tx.object(agentCardId),
+        tx.pure.bool(won),
+        tx.pure.bool(overturned),
+      ],
+    });
+    return tx;
+  }
+
+  /** Fetch an AgentCard object's parsed Move fields. */
+  async getAgentCard(cardId: string) {
+    const obj = await this.client.getObject({
+      id: cardId,
+      options: { showContent: true, showType: true },
+    });
+    return obj.data;
   }
 
   // ----- reads -----
