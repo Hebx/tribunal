@@ -39,3 +39,12 @@ export {
   resolveSeal,
 } from "./memory/seal.js";
 export { loadEnv } from "./memory/env.js";
+
+// Agents (v2) — bundled assert+record PTBs for the persona-debate pipeline
+export {
+  buildAssertAndRecord,
+  buildOverturnOutcomes,
+  assertAndRecordOutcomes,
+  type ParticipantStake,
+  type AssertAndRecordArgs,
+} from "./agents/outcomes.js";

@@ -29,3 +29,19 @@ Flow 2 — undisputed resolution, settle:
 
 Reproduce: `cd sdk && npm install && TRIBUNAL_NETWORK=testnet npm run deploy && npm run e2e`
 (signer is sourced from `TRIBUNAL_PRIVKEY` or the Sui CLI keystore).
+
+### v2 — persona-debate package (testnet)
+
+- **Package ID:** `0x2076d59aad67a1c8305d750ce9c0853238b094655ac179b9435402c73d872d1c`
+- **CaseCreatorCap:** `0xf5043e63d909aba053c1418f6cd85b4e36a6bb05031039191397275504d479b1`
+- **ReputationCap:** `0x89ec20f484192962fcc264ba13c83f4aa98e5bbbe6af21aa400a1d721e1df859`
+- **Publish digest:** `HJhwTiZCqHDpUPqBWUN8bV9iQk8J4dWc6CsBEh8omoLW`
+
+Bundled assert+record verified on testnet (one PTB, atomic):
+- `register_agent` (affirmer, Pragmatist) `7D7hXwxNTNFqUborRsr8q5RHjkF3XfJ7SXSo5gAT9cnT`
+- `register_agent` (denier, Textualist) `3GVhmupbfVp1D13Ka1NKNRCZ7r2KjXzxTWBGvz89G1r5`
+- `create_case` `ELXwt4PXFR5bL8UBXX4NNg847TLuvAvfEmKWyM8TeXUi`
+- `assert_resolution + 2x record_outcome` (bundled) `GAwUV7WES78RJYBYmyLUvsScffJPRymUepP1LRPEUsW3`
+- final state: case asserted YES, affirmer score `100 → 120`, denier score `100 → 85` ✓
+
+Reproduce: `cd sdk && node --import tsx scripts/verify-outcomes.mts`
