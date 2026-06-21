@@ -5,10 +5,8 @@
 // targets 2.x). Pure fetch against the OpenAI-compatible Kiro gateway. This is
 // the REAL judge — N models vote in parallel on a subjective question.
 
-import { readFileSync } from "node:fs";
-import { homedir } from "node:os";
-import { join } from "node:path";
 import { createHash } from "node:crypto";
+import { envVal, gatewayBaseUrl, gatewayApiKey } from "./gateway";
 
 export interface JudgeVote {
   model: string;
@@ -43,26 +41,7 @@ const VOTE_SYSTEM = (prompt: string, sources: string) =>
   `"rationale": "<=240 chars"}. vote=true means the claim resolves YES/TRUE.`;
 
 /** Read a key from env, falling back to ~/.hermes/.env (zero-dep). */
-function envVal(key: string): string | undefined {
-  if (process.env[key]) return process.env[key];
-  try {
-    const raw = readFileSync(join(homedir(), ".hermes", ".env"), "utf8");
-    for (const line of raw.split("\n")) {
-      const t = line.trim();
-      if (!t || t.startsWith("#")) continue;
-      const eq = t.indexOf("=");
-      if (eq < 0) continue;
-      if (t.slice(0, eq).trim() === key) {
-        let v = t.slice(eq + 1).trim();
-        if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) v = v.slice(1, -1);
-        return v;
-      }
-    }
-  } catch {
-    /* no env file */
-  }
-  return undefined;
-}
+// envVal is provided by ./gateway
 
 export function committeeModels(): string[] {
   return (envVal("TRIBUNAL_COMMITTEE_MODELS") ?? "claude-haiku-4.5,claude-sonnet-4.5,minimax-m2.5")
@@ -133,9 +112,8 @@ async function askOne(
 
 /** Run the full committee in parallel and aggregate to a verdict. */
 export async function judge(question: string, evidence: string, priorContext?: string): Promise<Verdict> {
-  const baseUrl = envVal("KIRO_GATEWAY_BASE_URL") ?? "http://127.0.0.1:8000";
-  const apiKey = envVal("KIRO_GATEWAY_API_KEY");
-  if (!apiKey) throw new Error("KIRO_GATEWAY_API_KEY not configured (env or ~/.hermes/.env)");
+  const baseUrl = gatewayBaseUrl();
+  const apiKey = gatewayApiKey();
   const models = committeeModels();
 
   const votes = await Promise.all(models.map((m) => askOne(baseUrl, apiKey, m, question, evidence, priorContext)));
