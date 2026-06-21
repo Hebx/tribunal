@@ -201,3 +201,99 @@ test("recall({ kind: 'case_law' }) surfaces the precedent and decrypts confident
   assert.equal(debateHits[0].entry.kind, "debate_transcript");
   assert.match(String(debateHits[0].entry.text), /R1\/YES/);
 });
+
+test("v3: provenance entry is persisted PUBLIC when bundle.provenance is present", async () => {
+  const walrus = new FakeWalrus();
+  const seal = new TestAesSeal(randomBytes(32));
+  const mem = new TribunalMemory("walrus-ns://tribunal/provenance", walrus, new HashEmbedder(), seal);
+  const bundle: VerdictBundleLike = {
+    ...makeBundle(),
+    guardrailConfigHash: "g".repeat(64),
+    provenance: {
+      caseId: "0xCASE",
+      poolId: "0xPOOL",
+      advocates: {
+        affirmer: {
+          agentCardId: "0xaff",
+          archetypeId: "pragmatist",
+          personaHash: "a".repeat(64),
+          score: 14,
+          isFirstStaker: true,
+          amount: "100",
+          weight: "300",
+        },
+        denier: {
+          agentCardId: "0xden",
+          archetypeId: "textualist",
+          personaHash: "b".repeat(64),
+          score: 9,
+          isFirstStaker: true,
+          amount: "100",
+          weight: "300",
+        },
+      },
+      backers: { yes: [], no: [] },
+      jurors: [
+        { agentCardId: "0xj1", archetypeId: "risk-hawk", personaHash: "c".repeat(64), score: 31 },
+        { agentCardId: "0xj2", archetypeId: "ethicist", personaHash: "d".repeat(64), score: 12 },
+        { agentCardId: "0xj3", archetypeId: "intent-first", personaHash: "e".repeat(64), score: 7 },
+      ],
+      jurySelection: { seed: "0xdeadbeef", fallbackUsed: false },
+      models: { advocate: "haiku-4.5", jury: "sonnet-4.6", guardrail: "opus-4.8" },
+      configHashes: { resolver: "r".repeat(64), guardrail: "g".repeat(64) },
+      gateway: {
+        base: "https://gw.test/v1",
+        temperatures: { advocate: 0.4, jury: 0.3, guardrail: 0 },
+      },
+      decidedAt: 1750000000000,
+      resolverCommit: "abc1234",
+    },
+  };
+
+  const persisted = await persistVerdictBundle(mem, "0xCASE", bundle);
+
+  // 6 entries this time (added provenance), all the expected kinds present.
+  assert.equal(persisted.rows.length, 6);
+  const kinds = persisted.rows.map((r) => r.kind).sort();
+  assert.deepEqual(kinds, [
+    "case_law",
+    "debate_transcript",
+    "guardrail_decision",
+    "jury_deliberation",
+    "provenance",
+    "verdict",
+  ]);
+
+  // Provenance must be PUBLIC (plaintext at rest). Audit trail is unreadable
+  // if the seal layer were ever to silently encrypt it.
+  const provRow = persisted.rows.find((r) => r.kind === "provenance")!;
+  const raw = await walrus.readByIdentifier(provRow.quiltId, provRow.identifier);
+  assert.ok(!isSealedAtRest(raw), "provenance must be public, not sealed at rest");
+
+  // Round-trip the JSON and confirm the full audit row was preserved.
+  const parsed = JSON.parse(new TextDecoder().decode(raw));
+  assert.equal(parsed.kind, "provenance");
+  const data = parsed.data;
+  assert.equal(data.caseId, "0xCASE");
+  assert.equal(data.poolId, "0xPOOL");
+  assert.equal(data.advocates.affirmer.agentCardId, "0xaff");
+  assert.equal(data.advocates.affirmer.isFirstStaker, true);
+  assert.equal(data.jurors.length, 3);
+  assert.equal(data.jurySelection.seed, "0xdeadbeef");
+  assert.equal(data.configHashes.guardrail.length, 64);
+  assert.equal(data.gateway.temperatures.guardrail, 0);
+  assert.equal(data.resolverCommit, "abc1234");
+
+  // patches map exposes provenance for client lookup.
+  assert.ok(persisted.patches.provenance);
+});
+
+test("v3: persistVerdictBundle stays 5-entry when bundle.provenance is absent (backcompat)", async () => {
+  const walrus = new FakeWalrus();
+  const seal = new TestAesSeal(randomBytes(32));
+  const mem = new TribunalMemory("walrus-ns://tribunal/backcompat", walrus, new HashEmbedder(), seal);
+  const bundle = makeBundle(); // no provenance
+  const persisted = await persistVerdictBundle(mem, "0xCASE", bundle);
+  assert.equal(persisted.rows.length, 5);
+  assert.ok(!persisted.patches.provenance);
+});

@@ -32,7 +32,9 @@ export type EntryKind =
   // v2 — persona-debate pipeline (added M4.3)
   | "debate_transcript" // full multi-round advocate transcript
   | "jury_deliberation" // first-pass + final juror votes + dissent + disagreement
-  | "guardrail_decision"; // opus-4.8 ruling: ratification/override + bias flags
+  | "guardrail_decision" // opus-4.8 ruling: ratification/override + bias flags
+  // v3 — stake-gated matchmaking audit row (M3b)
+  | "provenance"; // reproducible audit trail: advocates / backers / jurors / seeds / configHashes / models
 
 export interface MemoryEntry {
   /** Stable within a namespace; becomes the Quilt patch identifier. */

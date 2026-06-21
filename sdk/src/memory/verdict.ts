@@ -13,7 +13,7 @@
 // SHAPE-COMPATIBLE with the app's `VerdictBundle` (app/src/lib/server/resolve.ts).
 // We define a structural interface locally to avoid a cross-package import.
 
-import { TribunalMemory, type IndexRow } from "./index.js";
+import { TribunalMemory, type IndexRow, type EntryKind } from "./index.js";
 
 // --- structural mirror of app's VerdictBundle (kept loose so we don't couple) ---
 interface DebateArgument {
@@ -53,12 +53,25 @@ interface GuardrailLike {
   biasFlags: string[];
   confidence: number;
   reasoning: string;
+  /** v3 additions — present on bundles built post-M3a; optional for backcompat. */
+  personaTrapsRejected?: string[];
+  configHash?: string;
 }
 interface CaseLike {
   question: string;
   criteria: string;
   evidence: string;
 }
+/**
+ * v3 provenance — full audit row capturing exactly who argued, who voted, on
+ * which model, with which prompt version. Carried as a typed entry so any
+ * reader can reproduce the verdict from on-chain ids alone.
+ *
+ * Kept loose (Record-shape) here to avoid coupling the SDK to the app's
+ * type — the app emits the strict ProvenanceShape and the SDK just round-trips
+ * the bytes.
+ */
+type ProvenanceLike = Record<string, unknown>;
 export interface VerdictBundleLike {
   case: CaseLike;
   debate: DebateLike;
@@ -68,6 +81,10 @@ export interface VerdictBundleLike {
   models: { advocate: string; jury: string; guardrail: string };
   configHashHex: string;
   decidedAt: number;
+  /** v3 — sha256 of the locked guardrail prompt at decision time. */
+  guardrailConfigHash?: string;
+  /** v3 — audit row. When present, persisted as a 6th typed entry. */
+  provenance?: ProvenanceLike;
 }
 
 export interface PersistedBundle {
@@ -136,12 +153,18 @@ export async function persistVerdictBundle(
     guardrail: entryId("guardrail", caseId),
     verdict: entryId("verdict", caseId),
     case_law: entryId("caselaw", caseId),
+    ...(bundle.provenance ? { provenance: entryId("provenance", caseId) } : {}),
   };
 
-  const { quiltId, rows } = await memory.remember([
+  const baseEntries: Array<{
+    id: string;
+    kind: EntryKind;
+    text: string;
+    data: Record<string, unknown>;
+  }> = [
     {
       id: ids.debate,
-      kind: "debate_transcript",
+      kind: "debate_transcript" as const,
       text: summariseDebate(bundle.debate),
       data: {
         rounds: bundle.debate.rounds,
@@ -150,13 +173,13 @@ export async function persistVerdictBundle(
     },
     {
       id: ids.jury,
-      kind: "jury_deliberation",
+      kind: "jury_deliberation" as const,
       text: summariseJury(bundle.jury),
       data: { jury: bundle.jury, model: bundle.models.jury },
     },
     {
       id: ids.guardrail,
-      kind: "guardrail_decision",
+      kind: "guardrail_decision" as const,
       text:
         `Guardrail (${bundle.models.guardrail}): ` +
         `${bundle.guardrail.ratifiedJury ? "ratified" : "OVERRODE"} jury, ` +
@@ -166,24 +189,36 @@ export async function persistVerdictBundle(
         (bundle.guardrail.overrideReason
           ? `\nOverride reason: ${bundle.guardrail.overrideReason}`
           : ""),
-      data: { guardrail: bundle.guardrail, model: bundle.models.guardrail },
+      data: {
+        guardrail: bundle.guardrail,
+        model: bundle.models.guardrail,
+        // v3: pin the prompt version on the public guardrail entry.
+        ...(bundle.guardrailConfigHash
+          ? { guardrailConfigHash: bundle.guardrailConfigHash }
+          : {}),
+      },
     },
     {
       id: ids.verdict,
-      kind: "verdict",
+      kind: "verdict" as const,
       text:
         `${bundle.finalOutcome ? "YES" : "NO"} — ${bundle.case.question}\n` +
         `config: ${bundle.configHashHex}`,
       data: {
         finalOutcome: bundle.finalOutcome,
         configHashHex: bundle.configHashHex,
+        // v3: pin both hashes (resolver model map + guardrail prompt) on the
+        // public verdict entry so anchoring on-chain stays tamper-evident.
+        ...(bundle.guardrailConfigHash
+          ? { guardrailConfigHash: bundle.guardrailConfigHash }
+          : {}),
         models: bundle.models,
         decidedAt: bundle.decidedAt,
       },
     },
     {
       id: ids.case_law,
-      kind: "case_law",
+      kind: "case_law" as const,
       text: compactCaseLaw(bundle),
       data: {
         question: bundle.case.question,
@@ -192,7 +227,27 @@ export async function persistVerdictBundle(
         configHashHex: bundle.configHashHex,
       },
     },
-  ]);
+  ];
+
+  // v3: provenance row is the audit trail. PUBLIC (must be readable for anyone
+  // to reproduce the verdict from on-chain ids alone). Optional because legacy
+  // bundles predate it — when absent, persistVerdictBundle stays a 5-entry
+  // Quilt for backcompat.
+  if (bundle.provenance && ids.provenance) {
+    baseEntries.push({
+      id: ids.provenance,
+      kind: "provenance" as const,
+      text:
+        `Provenance for ${bundle.case.question.slice(0, 80)} ` +
+        `· verdict ${bundle.finalOutcome ? "YES" : "NO"} ` +
+        `· decidedAt ${new Date(bundle.decidedAt).toISOString()}`,
+      // Store the full provenance object verbatim so a reader can rebuild the
+      // run without trusting the resolver UI.
+      data: bundle.provenance as Record<string, unknown>,
+    });
+  }
+
+  const { quiltId, rows } = await memory.remember(baseEntries);
 
   // Quilt identifier (the in-quilt name) is the patchIdentifier mapping applied
   // to entryId. TribunalMemory normalises with the same rule, so we replicate
