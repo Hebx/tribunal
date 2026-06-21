@@ -4,8 +4,10 @@ import { getMockBattle } from "@/lib/mock";
 import { StatusBadge } from "@/components/StatusBadge";
 import { AgentAvatar } from "@/components/AgentChip";
 import { LiveTribunal } from "@/components/LiveTribunal";
+import { LiveTribunalV2 } from "@/components/LiveTribunalV2";
 import { OnChainPanel } from "@/components/OnChainPanel";
 import { DisputeButton } from "@/components/DisputeButton";
+import { StakeInPanel } from "@/components/StakeInPanel";
 import { explorerTx, explorerObject } from "@/lib/chain";
 import type { Agent } from "@/lib/types";
 
@@ -109,13 +111,32 @@ export default function BattlePage({ params }: { params: { id: string } }) {
         <OnChainPanel battle={battle} />
       </div>
 
+      {/* Stake-in: wallet-signed opt-in PvP (v2 M5.3) */}
+      {battle.caseId && (
+        <div className="mb-6">
+          <StakeInPanel caseId={battle.caseId} />
+        </div>
+      )}
+
       {/* Permissionless bonded dispute (real on-chain cases, not yet settled) */}
       <div className="mb-8">
         <DisputeButton battle={battle} />
       </div>
 
-      {/* The bench */}
-      <LiveTribunal battle={battle} />
+      {/* The bench — v2 persona-debate pipeline (debate → jury → guardrail) */}
+      <div className="mb-10">
+        <LiveTribunalV2 battle={battle} />
+      </div>
+
+      {/* Legacy single-pass committee (kept for the M3c precedent recall demo) */}
+      <details className="mb-8">
+        <summary className="cursor-pointer font-mono text-[11px] uppercase tracking-wider text-text-faint hover:text-text-muted">
+          Legacy committee (single-pass, with precedent recall)
+        </summary>
+        <div className="mt-3">
+          <LiveTribunal battle={battle} />
+        </div>
+      </details>
     </div>
   );
 }

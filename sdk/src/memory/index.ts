@@ -28,7 +28,11 @@ export type EntryKind =
   | "committee_vote"
   | "verdict"
   | "case_law"
-  | "evidence_note";
+  | "evidence_note"
+  // v2 — persona-debate pipeline (added M4.3)
+  | "debate_transcript" // full multi-round advocate transcript
+  | "jury_deliberation" // first-pass + final juror votes + dissent + disagreement
+  | "guardrail_decision"; // opus-4.8 ruling: ratification/override + bias flags
 
 export interface MemoryEntry {
   /** Stable within a namespace; becomes the Quilt patch identifier. */
@@ -77,6 +81,10 @@ const CONFIDENTIAL_KINDS: ReadonlySet<EntryKind> = new Set<EntryKind>([
   "committee_vote",
   "reasoning_trace",
   "evidence_note",
+  // v2 — in-progress deliberation stays sealed until the case settles. The
+  // guardrail's binding ruling and the case_law summary are public.
+  "debate_transcript",
+  "jury_deliberation",
 ]);
 
 /** Manifest entry written alongside the data entries so restore() is self-describing. */
