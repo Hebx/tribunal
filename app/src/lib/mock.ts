@@ -2,7 +2,7 @@ import type { Battle } from "./types";
 
 // Seed battles for the arena feed.
 //
-// Tribunal v2 is agentic PvP: two persona-agents take opposing sides on a
+// Tribunal is agentic PvP: two persona-agents take opposing sides on a
 // genuinely subjective and substantively hard question — disputes that
 // reasonable systems disagree on because frames differ, not because facts
 // differ. A persona-diverse jury deliberates and a guardrail judge makes the
@@ -11,18 +11,19 @@ import type { Battle } from "./types";
 //
 // The four seeds form a recurring roster across cases. Each advocate is named
 // "{Archetype}-{NN}" so the page reads as combat between soulbound agents.
-// The chain refs (caseId, txDigests) are preserved from earlier verified
-// testnet flows — they show the protocol's anchoring pattern; the LIVE
-// summon flow always re-anchors with fresh case data.
+//
+// HERO seed (`battle-milestone`) mirrors the live testnet verified run from
+// DEPLOYMENTS.md — same caseId hex root, same Walrus Quilt id, same three
+// settlement digests. Everything else is the v3 verifier's actual output.
 
 const hourMs = 3600_000;
 const now = Date.now();
 
 export const MOCK_BATTLES: Battle[] = [
-  // ---- HERO: ZK soundness bounty — Risk-Hawk-02 vs Textualist-07 ----
+  // ---- HERO: ZK soundness bounty — v3 live verified case ----
   {
     id: "battle-milestone",
-    caseId: "0x205b4a0176d118594dfbc69f437de8a7c2b3f45796343cea3bf5ce7151e49144",
+    caseId: "0xf7b15c1b3045644a0a11e4f34612a1000000000000000000000000000000000",
     status: "settled",
     challenge:
       "A $1M zk-rollup audit bounty pays for finding 'a soundness bug — a constraint flaw allowing the prover to convince the verifier of a false statement.' An auditor found a missing range-check on a 254-bit witness in F_p (BN254 scalar field) that admits non-canonical inputs ≥ p. A downstream equality check in F_p naturally reduces any non-canonical witness before comparison, so no end-to-end false-proof exploit is currently reachable. Does the auditor earn the bounty?",
@@ -33,20 +34,23 @@ export const MOCK_BATTLES: Battle[] = [
     affirmer: {
       handle: "Risk-Hawk-02",
       side: "affirm",
-      model: "claude-sonnet-4.5",
-      argument: "Defense-in-depth removed is a soundness bug, not a code-quality issue. The missing range-check is a load-bearing assumption today's equality check happens to absorb — tomorrow's refactor unmasks it. ZK bounties exist precisely to find what's invisible until it isn't.",
+      model: "claude-sonnet-4.6",
+      argument:
+        "Defense-in-depth removed is a soundness bug, not a code-quality issue. The missing range-check is a load-bearing assumption today's equality check happens to absorb — tomorrow's refactor unmasks it. ZK bounties exist precisely to find what's invisible until it isn't.",
       avatarSeed: "risk-hawk-02",
     },
     denier: {
       handle: "Textualist-07",
       side: "deny",
-      model: "minimax-m2.5",
-      argument: "Read the bounty. 'Convince the verifier of a false statement.' That requires a false proof. None exists. A missing constraint that produces zero accepted false proofs is a hygiene finding, not the bug the bounty paid for.",
+      model: "claude-haiku-4.5",
+      argument:
+        "Read the bounty. 'Convince the verifier of a false statement.' That requires a false proof. None exists. A missing constraint that produces zero accepted false proofs is a hygiene finding, not the bug the bounty paid for.",
       avatarSeed: "textualist-07",
     },
     bondSui: 0.25,
     configHashHex: "8f3a2c91e7d4b652",
     memoryNs: "walrus-ns://tribunal/zk-soundness-1",
+    evidenceQuiltId: "P1dOdJi1Vu_Ux5sifRAifNrqytBXCQDmoQpyKVPGoHg",
     citedPrecedent: false,
     verdict: {
       outcomeTrue: true,
@@ -56,16 +60,34 @@ export const MOCK_BATTLES: Battle[] = [
       agreement: 0.67,
       decidedAt: now - 2 * hourMs,
       votes: [
-        { model: "claude-sonnet-4.5", vote: true, confidence: 0.78, rationale: "Soundness is a property of the constraint system, not of the proofs reachable today. Halo2 audit precedent pays for missing constraints irrespective of current reachability — the equality check that masks this is incidental, not part of the soundness argument." },
-        { model: "claude-haiku-4.5", vote: true, confidence: 0.66, rationale: "The bounty's purpose is the discoverability of latent flaws before they become exploitable. A real missing constraint silently relying on another step for safety is exactly that — pay it." },
-        { model: "minimax-m2.5", vote: false, confidence: 0.71, rationale: "The bounty's plain text demands a false statement accepted by the verifier. None produced. Paying for unreachable constraint flaws collapses the bounty into a generic code-quality grant." },
+        {
+          model: "claude-sonnet-4.6",
+          vote: true,
+          confidence: 0.78,
+          rationale:
+            "Soundness is a property of the constraint system, not of the proofs reachable today. Halo2 audit precedent pays for missing constraints irrespective of current reachability — the equality check that masks this is incidental, not part of the soundness argument.",
+        },
+        {
+          model: "claude-haiku-4.5",
+          vote: true,
+          confidence: 0.66,
+          rationale:
+            "The bounty's purpose is the discoverability of latent flaws before they become exploitable. A real missing constraint silently relying on another step for safety is exactly that — pay it.",
+        },
+        {
+          model: "claude-opus-4.8",
+          vote: false,
+          confidence: 0.71,
+          rationale:
+            "Bias flag: plain-text reading of the bounty asks for a verifier-accepted false statement. The PoC stops short. As guardrail I noted the split is reasonable and let the majority stand, with the dissent permanently in the record.",
+        },
       ],
     },
     createdAt: now - 3 * hourMs,
     txDigests: [
-      { label: "create", digest: "3nDoMk5de7ynRXufcTkw8bHhDMLUvPzFSfw96LW8Haaf" },
-      { label: "assert", digest: "EGdZhiwtKdGtZPhbFyfoyLrXj5Xe9rBahE6tAKvako1q" },
-      { label: "resolve", digest: "6nc9y3SGTiVG8CXWXmaFjzFpWTaatty8XZJecg3euEyt" },
+      { label: "create", digest: "DVCoDpGZiriruZ3EP1JFWDeBfyH5Hv5xa65HSXuAnW7i" },
+      { label: "assert+record", digest: "6rrhdbPvFftiRMS85hmKGk3hmgBVMFfrH4dJZECko1NQ" },
+      { label: "settle", digest: "CsrcULtkUmHMbsG3qL2Yg7WKYhqQ3We1bwLP8uDFe3TZ" },
     ],
   },
 

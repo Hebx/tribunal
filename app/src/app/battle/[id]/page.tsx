@@ -111,7 +111,7 @@ export default function BattlePage({ params }: { params: { id: string } }) {
         <OnChainPanel battle={battle} />
       </div>
 
-      {/* Stake-in: wallet-signed opt-in PvP (v2 M5.3) */}
+      {/* Stake-in: wallet-signed opt-in PvP */}
       {battle.caseId && (
         <div id="stake-in-panel" className="mb-6">
           <StakeInPanel caseId={battle.caseId} />
@@ -123,12 +123,12 @@ export default function BattlePage({ params }: { params: { id: string } }) {
         <DisputeButton battle={battle} />
       </div>
 
-      {/* The bench — v2 persona-debate pipeline (debate → jury → guardrail) */}
+      {/* The bench — persona-debate pipeline (debate → jury → guardrail) */}
       <div className="mb-10">
         <LiveTribunalV2 battle={battle} />
       </div>
 
-      {/* Legacy single-pass committee (kept for the M3c precedent recall demo) */}
+      {/* Legacy single-pass committee (kept for the precedent-recall demo) */}
       <details className="mb-8">
         <summary className="cursor-pointer font-mono text-[11px] uppercase tracking-wider text-text-faint hover:text-text-muted">
           Legacy committee (single-pass, with precedent recall)
