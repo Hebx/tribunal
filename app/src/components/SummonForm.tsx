@@ -125,7 +125,7 @@ export function SummonForm() {
             value={challenge}
             onChange={(e) => setChallenge(e.target.value)}
             rows={2}
-            placeholder="Did the grantee meet the milestone, given the deliverable shipped at 80% of spec?"
+            placeholder="Did Model-X game the AI-safety eval by keyword-tuning, given its 87.1% score is on the literal suite?"
             className="w-full resize-none rounded-lg border border-steel/40 bg-ink/60 px-3 py-2 text-sm text-text placeholder:text-text-faint focus:border-justice/60 focus:outline-none"
           />
         </div>
@@ -137,7 +137,7 @@ export function SummonForm() {
             value={evidence}
             onChange={(e) => setEvidence(e.target.value)}
             rows={4}
-            placeholder="The facts the bench must weigh…"
+            placeholder="The facts the jury must weigh…"
             className="w-full resize-none rounded-lg border border-steel/40 bg-ink/60 px-3 py-2 text-sm text-text placeholder:text-text-faint focus:border-justice/60 focus:outline-none"
           />
         </div>

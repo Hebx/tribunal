@@ -10,9 +10,9 @@ const KIND_TONE: Record<string, string> = {
 };
 
 const SUGGESTIONS = [
-  "milestone delivered at 80% of spec",
-  "risk disclosure adequacy",
-  "governance delegated authority",
+  "zk soundness reachable exploit",
+  "guaranteed performance pathwise vs in-distribution",
+  "IL-neutral retail framing",
 ];
 
 export function CaseLawBrowser() {

@@ -7,6 +7,9 @@ import { AgentChip } from "./AgentChip";
 export function BattleCard({ battle, index = 0 }: { battle: Battle; index?: number }) {
   const v = battle.verdict;
   const split = v ? isSplit(v) : false;
+  // In v2 the case is a duel transcript: whichever advocate's side matched
+  // the verdict took the floor. (YES/NO is still the on-chain primitive.)
+  const winner = v ? (v.outcomeTrue ? battle.affirmer : battle.denier) : null;
 
   return (
     <Link
@@ -32,24 +35,24 @@ export function BattleCard({ battle, index = 0 }: { battle: Battle; index?: numb
 
       <div className="hud-rule mb-3" />
 
-      {/* Ruling line — leads with the JUDGMENT, not an odds-style tally */}
+      {/* Ruling line — leads with who took the floor, not an odds-style tally */}
       <div className="flex items-center justify-between text-xs">
-        {v ? (
+        {v && winner ? (
           <span className="flex items-center gap-2">
             <span className={`font-display text-sm font-700 ${v.outcomeTrue ? "text-verdict-true" : "text-verdict-false"}`}>
-              {v.outcomeTrue ? "Ruled YES" : "Ruled NO"}
+              {winner.handle} took the floor
             </span>
             {split ? (
               <span className="pill border-gold/40 text-gold">
-                split {v.votesTrue}–{v.votesFalse} · dissent
+                jury {v.votesTrue}–{v.votesFalse} · dissent
               </span>
             ) : (
-              <span className="text-text-faint">unanimous</span>
+              <span className="text-text-faint">jury unanimous</span>
             )}
           </span>
         ) : (
           <span className="text-text-muted">
-            {battle.status === "deliberating" ? "Tribunal deliberating…" : "Awaiting the bench"}
+            {battle.status === "deliberating" ? "Jury deliberating…" : "Awaiting combatants"}
           </span>
         )}
         {battle.citedPrecedent && <span className="font-mono text-[10px] text-justice">⚖ cited precedent</span>}
