@@ -4,7 +4,7 @@
 
 # Tribunal
 
-**The judicial layer for agent societies. Stake-gated, persona-judged, remembered on Walrus.**
+**The judicial layer for agent societies. A bonded, persona-judged court that remembers its own rulings.**
 
 [![move-ci](https://github.com/Hebx/tribunal/actions/workflows/move-ci.yml/badge.svg)](https://github.com/Hebx/tribunal/actions/workflows/move-ci.yml)
 [![app-ci](https://github.com/Hebx/tribunal/actions/workflows/app-ci.yml/badge.svg)](https://github.com/Hebx/tribunal/actions/workflows/app-ci.yml)
@@ -20,24 +20,50 @@
 
 ---
 
-## A case, in one paragraph
+## Tribunal in one paragraph
 
-Two parties disagree on a question that has no factual answer — only a frame.
-A researcher says a missing range-check is a soundness bug; an audit firm
-says no end-to-end exploit means no payout. They take it to Tribunal. Both
-**stake** on the side they believe in. Whoever stakes first on each side
-becomes that side's **advocate**, and their persona-agent argues the case in
-front of a **persona-diverse jury**. A **guardrail judge** with a locked
-prompt makes the binding call. The whole proceeding — debate, deliberation,
+Tribunal is an on-chain court for agent societies. Two parties take opposite
+sides of a genuinely contestable question — one where there is no fact to
+look up, only a frame to apply. Both **stake** on the side they believe in.
+Whoever stakes first on each side becomes that side's **advocate**, and
+their soulbound persona-agent argues the case in front of a
+**persona-diverse jury**. A **guardrail judge** with a sha256-locked prompt
+makes the binding call. The whole proceeding — debate, deliberation,
 verdict, dissent, full audit row — is written to **Walrus** as one typed
-container, anchored to **Sui** by a cryptographic hash. The winning side
-gets paid by formula. The advocate, who carried the argument, gets paid
-three times more than a passive backer at equal stake. The precedent is
-remembered, and the next time a similar case comes up, the panel reads it
-first.
+container, anchored to **Sui** by a cryptographic hash. Winners are paid by
+formula; the advocate, who carried the argument, earns three times the
+share of a passive backer at equal stake. The precedent is **remembered as
+typed case law**, and the next time a panel meets a similar question, it
+reads the prior ruling first. Disputable. Reproducible. Compounding.
 
-That whole story, walked end-to-end with every file and transaction, is in
-**[USER_STORY.md](USER_STORY.md)**.
+It is not a prediction-market oracle. It is not an LLM debate demo. It is a
+durable, programmable arbitration layer where **the disagreement is the
+product and the precedent is the moat.**
+
+## A real case, in 60 seconds
+
+A zero-knowledge audit firm posts a **$1M bounty**: *find a soundness bug
+in the BN254 circuit*. A researcher submits a missing range-check on a
+254-bit witness — by the bounty's plain text, that is a soundness gap. The
+firm refuses to pay: a downstream equality check masks the flaw, no
+reachable exploit exists, the spirit of the bounty was end-to-end safety.
+
+This is a frame disagreement, not a fact disagreement. A single AI judge
+gets these wrong half the time, with confidence. Both parties take it to
+Tribunal.
+
+1. The researcher stakes 0.01 SUI on YES (the bounty is owed) — she becomes the **YES advocate**.
+2. The firm's agent stakes 0.02 SUI on NO — it becomes the **NO advocate**.
+3. A community member stakes 0.005 SUI on YES as a **backer**.
+4. Two advocates argue, two rounds. A jury of three archetypes (Textualist, Consequentialist, Pragmatist) deliberates. The vote is 2-1 YES with a recorded dissent.
+5. A guardrail judge with a locked prompt ratifies YES, flags no bias amplification, and stamps both config hashes on the bundle.
+6. One Walrus Quilt lands with **six typed entries**: debate, jury, guardrail, verdict, case law, full provenance.
+7. A single PTB atomically anchors the verdict, moves reputation, and exposes the dispute window.
+8. The window expires; sealed entries flip public. The researcher claims **0.027 SUI** (principal + 3× share of the losing pool). The backer claims **0.008 SUI** (principal + 1× share). The firm's receipt is consumed with zero payout.
+9. The next time a panel sees *"missing range-check, no reachable exploit"*, it reads this case first.
+
+The full walkthrough — every transaction, every file, every line of code —
+is in **[USER_STORY.md](USER_STORY.md)**. Read that next.
 
 ## Why this exists
 
@@ -55,27 +81,27 @@ up everywhere:
 Tribunal's answer: **diversity comes from personas, not model weights.** A
 Textualist juror and a Risk-Hawk juror reading the same evidence with the
 same model land in different places, and *that disagreement is the signal*.
-A guardrail judge then resists the bias-amplification that debate alone
+A guardrail judge then resists the bias amplification that debate alone
 introduces. Skin-in-the-game ensures only real disputes get judged.
-Reproducible audit trails ensure the verdict can be re-run from a transaction
-id alone.
+Reproducible audit trails ensure the verdict can be re-run from a tx id
+alone.
 
 The output is not a chat log. It is **typed case law on Walrus**.
 
 ## How it works
 
 ```
-   ┌──────────────────┐  ┌─────────────────────┐  ┌──────────────────┐  ┌──────────────────────┐
-   │  stake on a side │→ │  advocates debate   │→ │   jury deliberates  │→ │   guardrail rules    │
-   │  (first staker = │  │  (N rounds, both    │  │  (first-pass +    │  │  (binding verdict,   │
-   │   advocate, 3×)  │  │   sides argue)      │  │   cross-exam +    │  │   ratifies or        │
-   │                  │  │                     │  │   final, dissent  │  │   overrides jury,    │
-   │                  │  │                     │  │   preserved)      │  │   prompt-hash locked)│
-   └──────────────────┘  └─────────────────────┘  └──────────────────┘  └──────────────────────┘
-                                  ↓                       ↓                       ↓
-                          debate transcript     jury first/final +       guardrail decision +
-                          (sealed until         dissent (sealed)          bias flags + reasoning
-                          settle)                                         (public, with config hash)
+   ┌──────────────────┐  ┌─────────────────────┐  ┌──────────────────────┐  ┌──────────────────────┐
+   │  stake on a side │→ │  advocates debate   │→ │   jury deliberates   │→ │  guardrail rules     │
+   │  (first staker = │  │  (N rounds, both    │  │  (first-pass +       │  │  (binding verdict,   │
+   │   advocate, 3×)  │  │   sides argue)      │  │   cross-exam + final,│  │   ratifies or        │
+   │                  │  │                     │  │   dissent preserved) │  │   overrides jury;    │
+   │                  │  │                     │  │                      │  │   prompt-hash locked)│
+   └──────────────────┘  └─────────────────────┘  └──────────────────────┘  └──────────────────────┘
+                                  ↓                       ↓                          ↓
+                          debate transcript     jury first/final +          guardrail decision +
+                          (sealed until         dissent (sealed)            bias flags + reasoning
+                          settle)                                           (public, with config hash)
                                                               All written to Walrus as TYPED entries
                                                               ────────────────────────────────────
                                                                           ↓
@@ -84,9 +110,9 @@ The output is not a chat log. It is **typed case law on Walrus**.
    │    debate · jury · guardrail · verdict · case_law · provenance ← v3 audit row                 │
    │                                                                                               │
    │  Sui: assert_resolution(outcome, bond, evidence_ref → quilt_id)                              │
-   │       record_outcome(agent, win|loss)            ←  reputation moves with the verdict        │
-   │       stake → claim_winnings (3×-weighted)       ←  advocates get 3× share of losing pool    │
-   │       dispute_resolution                         ←  permissionless, bonded; can overturn     │
+   │       record_outcome(agent, win|loss)            ← reputation moves with the verdict         │
+   │       stake → claim_winnings (3×-weighted)       ← advocates get 3× share of losing pool     │
+   │       dispute_resolution                         ← permissionless, bonded; can overturn      │
    └──────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -94,25 +120,28 @@ The output is not a chat log. It is **typed case law on Walrus**.
 
 | Property | What you get | Why it matters |
 |---|---|---|
-| **Stake-gated** | A case can't be resolved until both sides have a staked advocate. The resolver returns `409 BothSidesMustStake` until both slots are filled. | No more single-party AI judgments. Compute is gated on conviction, not on a button click. |
-| **First-staker advocacy** | The first wallet to stake YES (or NO) becomes that side's advocate. Locked, immutable. | The protocol picks advocates by skin-in-the-game, not by a centralized matchmaker. |
-| **3× weighted claim share** | Advocates earn a `3.00×` share of the losing pool. Backers earn `1.00×`. Principal is fully returned to all winners. | The advocate carries the argument and gets paid for it. Verified live on-chain on every run — advocate bonus / backer bonus = **3.000** at equal stake. |
+| **Stake-gated resolution** | A case can't be resolved until both sides have a staked advocate. The resolver returns `409 BothSidesMustStake` until both slots are filled. | No more single-party AI judgments. Compute is gated on conviction, not on a button click. |
+| **First-staker advocacy** | The first wallet to stake YES (or NO) becomes that side's advocate. Locked at the protocol level, immutable thereafter. | The protocol picks advocates by skin-in-the-game, not by a centralized matchmaker. |
+| **3× weighted claim share** | Advocates earn a `3.00×` share of the losing pool; backers earn `1.00×`. Principal is fully returned to all winners. | The advocate carries the argument and gets paid for it. Verified live on-chain on every run: advocate bonus / backer bonus = **3.000** at equal stake. |
 | **Persona-diverse jury** | Three jurors, three distinct archetypes, deterministically seeded from the case id. Same case → same jury, every time. | Dissent is preserved, not silenced. The textualist juror's "no" against a 2-1 YES is part of the public record. |
-| **Locked resolver config** | The deciding model stack and the guardrail's prompt are sha256-committed at case creation. The resolver must present matching preimages, or the assert transaction aborts. | The model stack cannot be swapped silently. Not by the deployer, not by the protocol. |
-| **6-entry audit trail on Walrus** | Each verdict persists a Quilt with `debate · jury · guardrail · verdict · case_law · provenance`. The provenance row lists every advocate, every backer, every juror with archetype + seed, the model map, gateway temperatures, and the resolver commit. | Replay a run with the pinned hashes and commit — you get the same verdict. That is reproducibility, not vibes. |
-| **Graceful Walrus degradation** | If the Walrus publisher is unreachable, the verdict still returns. The `audit` field carries `{ ok: false, error }` and the UI surfaces the gap inline. The on-chain config-hash + guardrail-hash are the tamper-evident root. | The trail can fail open. The integrity root cannot. |
+| **Locked resolver + guardrail configs** | The deciding model stack and the guardrail's prompt are sha256-committed at case creation. The resolver must present matching preimages, or the assert transaction aborts. | The model stack cannot be swapped silently — not by the deployer, not by the protocol. |
+| **6-entry audit trail on Walrus** | Each verdict persists a Quilt with `debate · jury · guardrail · verdict · case_law · provenance`. The provenance row lists every advocate, every backer, every juror with archetype + seed, the model map, gateway temperatures, and the resolver commit hash. | Replay a run with the pinned hashes and commit — you get the same verdict. **Reproducibility, not vibes.** |
+| **Soulbound persona AgentCards** | Each agent is a non-transferable Sui object with a `persona_hash` and an outcome-based `score` that can only move via a `ReputationCap`. | Identity, accountability, and reputation are modelled in the type system, not as runtime checks. |
+| **Bundled atomic anchoring** | One PTB carries `assert_resolution + N × record_outcome`. Reputation moves with the verdict, not after it. | No window where the verdict is anchored but the agents haven't been credited or debited. |
+| **Seal-gated deliberation** | Debate transcript and jury deliberation are Seal-encrypted at rest; they decrypt only under an on-chain `seal_approve` predicate that flips public when the case settles. | Reasoning is confidential during the dispute window, auditable forever after. |
 | **Bonded dispute** | A counter-party can post a bond and re-open the case during the dispute window. Resolution flips reputation and pool payout accordingly. | Tribunal is not a final-answer oracle. It's a court with appeal. |
+| **Graceful Walrus degradation** | If the Walrus publisher is unreachable, the verdict still returns and `audit: { ok: false, error }` is surfaced inline. The on-chain config-hash + guardrail-hash are the tamper-evident root. | The trail can fail open. The integrity root cannot. |
 
-→ **Walk it through with a real case:** [`USER_STORY.md`](USER_STORY.md)
-→ **Coming from v2?** [`MIGRATION-v3.md`](MIGRATION-v3.md)
+→ **End-to-end walkthrough:** [`USER_STORY.md`](USER_STORY.md)
+→ **Migrating from v2:** [`MIGRATION-v3.md`](MIGRATION-v3.md)
 
-## Where things live (on-chain vs off-chain)
+## On-chain vs off-chain — the trust boundary
 
 | Layer | What it carries | Why there |
 |---|---|---|
-| **Sui (chain)** | Soulbound `AgentCard` + persona hash · outcome-based reputation · `StakePool` + `StakeReceipt` + claim math · `Case` lifecycle + binding outcome · locked **resolver + guardrail** config hashes · memory namespace pointer · resolver bond + dispute window · evidence anchor (blob id + sha256) | Identity, money, accountability, and the deciding-config commitment must be tamper-evident. |
-| **Walrus (verifiable storage)** | Debate transcript (sealed until settle) · jury first-pass + final + dissent (sealed) · guardrail ruling + bias flags + reasoning · **typed case law** (precedent) · **provenance audit row** · question + evidence text | Reasoning is too large for chain but must be auditable, recallable, and tamper-evident. Verdicts and case law are **public the moment a case settles**. |
-| **App (UI)** | Yes/no framing label · arena cosmetics · live render of the Walrus bundle + audit trail | UI framing is presentation, not protocol — verdicts never depend on it. |
+| **Sui (chain)** | Soulbound `AgentCard` + persona hash · outcome-based reputation (cap-gated) · `StakePool` + `StakeReceipt` + claim math · `Case` lifecycle + binding outcome · **locked resolver + guardrail config hashes** · memory namespace pointer · resolver bond + dispute window · evidence anchor (blob id + sha256) | Identity, money, accountability, and the deciding-config commitment must be tamper-evident. |
+| **Walrus (verifiable storage)** | Debate transcript (sealed until settle) · jury first-pass + final + dissent (sealed) · guardrail ruling + bias flags + reasoning (public) · **typed case law** (precedent) · **provenance audit row** (public) · question + evidence text | Reasoning is too large for chain but must be auditable, recallable, and tamper-evident. Verdicts and case law are **public the moment a case settles**. |
+| **App (UI)** | Yes/no framing labels · arena cosmetics · live render of the Walrus bundle + audit trail | UI framing is presentation, not protocol — verdicts never depend on it. |
 
 **Locked resolver config-hash.** At case creation the chain commits to
 `config_hash = sha256(advocate_model ‖ jury_models ‖ guardrail_model ‖ prompt ‖ sources)`.
@@ -120,15 +149,15 @@ The resolver must present a preimage hashing to that exact value when
 asserting the verdict, or the transaction aborts. **The deciding model
 stack cannot be swapped silently.**
 
-**Seal-gated access.** Sealed Walrus entries (debate transcript, jury
-deliberation) decrypt only under an on-chain policy. A verdict is public
-once settled; otherwise readable only by the recorded resolver. Access
-gates on stable on-chain facts, never on tx-ordering-sensitive state.
+**Seal-gated access.** Sealed Walrus entries decrypt only under an on-chain
+policy. A verdict is public once settled; otherwise readable only by the
+recorded resolver. Access gates on stable on-chain facts, never on
+tx-ordering-sensitive state.
 
 ## Why Sui + Walrus
 
-**Walrus** is not a cheaper S3. It is **verifiable, certifiable,
-programmable storage**, and Tribunal uses every part:
+**Walrus** is not cheaper S3. It is **verifiable, certifiable, programmable
+storage**, and Tribunal uses every part:
 
 - **Typed entries, not chat logs.** Each Quilt has typed patches
   (`debate_transcript`, `jury_deliberation`, `guardrail_decision`,
@@ -147,8 +176,9 @@ programmable storage**, and Tribunal uses every part:
 **Sui** gives Tribunal:
 
 - **Move 2024 type safety + capability discipline.** Reputation is
-  cap-gated, case creation is cap-gated, stake receipts are soulbound —
-  modelled in the type system, not as runtime checks.
+  cap-gated (`ReputationCap`), case creation is cap-gated
+  (`CaseCreatorCap`), stake receipts are soulbound — modelled in the type
+  system, not as runtime checks.
 - **Programmable Transaction Blocks** bundle `assert_resolution +
   N × record_outcome` into a single atomic tx, so reputation moves *with*
   the verdict, not after it.
@@ -163,8 +193,8 @@ programmable storage**, and Tribunal uses every part:
 | Component | Address |
 |---|---|
 | Package | [`0x88eeb06e…dd89`](https://suiscan.xyz/testnet/object/0x88eeb06e6d45c0edcbbaf965500d5429dc4d43a76072962560700d1a77efdd89) |
-| CaseCreatorCap | `0xa93b590a…988e` |
-| ReputationCap | `0x945e4f01…caed` |
+| CaseCreatorCap | `0xa93b590ab0e9983d30dfe2af4e73673d80cf6ae44dfe6223831af635aad1988e` |
+| ReputationCap | `0x945e4f01cf40b40d5304e51b965594d7664641e1f12160931cd1887e557bcaed` |
 | Publish digest | `2K8NvNKu84n7gfEyNuyPQPpmVMckSZ7y2Sau5F9anYsf` |
 | Latest v3 verifier run | quilt `P1dOdJi1Vu_Ux5sifRAifNrqytBXCQDmoQpyKVPGoHg`, 6/6 patches ✓ |
 
@@ -172,24 +202,48 @@ Every verified end-to-end transaction digest (assert+record bundle, full
 stake lifecycle with first-staker + 3× payout, 6-entry Walrus Quilt) is
 recorded in [`DEPLOYMENTS.md`](DEPLOYMENTS.md).
 
-## Follow along in 60 seconds (non-developers)
+## Follow along in 60 seconds (no code required)
 
-You don't need to run any of this to understand it. The artifacts speak for
+You don't need to run the repo to verify Tribunal. The artifacts speak for
 themselves:
 
 1. **Read the case story.** [`USER_STORY.md`](USER_STORY.md) walks a real
    dispute from start to finish — what each party does, where each
-   transaction lands, and how the math works. No code required.
+   transaction lands, and how the math works. Every step links the file
+   that implements it.
 2. **Open a verdict on Suiscan.** Any tx digest in
    [`DEPLOYMENTS.md`](DEPLOYMENTS.md) opens a live, public record of a
    Tribunal ruling on testnet.
-3. **Open a Walrus quilt.** The audit trail entries are publicly readable
+3. **Open a Walrus quilt.** The audit-trail entries are publicly readable
    from the Walrus aggregator at the patch ids listed in DEPLOYMENTS.md —
-   you can fetch the guardrail's reasoning, the verdict, and the provenance
-   row directly.
+   fetch the guardrail's reasoning, the verdict, and the provenance row
+   directly.
 
 If you want to see the proceeding in motion, the Arena UI is
 [`app/`](app/) — `pnpm dev` opens a live courtroom at `localhost:3000`.
+
+## What the verifier proves
+
+`sdk/scripts/verify-v3-flow.mts` runs against the live testnet package and
+Walrus publisher. On every run, it asserts:
+
+- **First-staker advocacy.** Advocate slots lock to the first wallet on each side.
+- **Weighted totals.** YES weighted = `3 × adv.principal + Σ backers`. Same for NO.
+- **Exact-3× bonus.** At equal principal, advocate bonus is **exactly 3×** backer bonus.
+- **Pool drains.** Losing pool fully redistributed; loser's receipt consumed with zero payout.
+- **6/6 audit-trail entries.** `debate · jury · guardrail · verdict · case_law · provenance` all persisted on Walrus.
+
+Latest run output (from PR #17):
+
+```
+YES_ADV    payout: 25_000_000 MIST = 10M principal + 15M share  ✓
+YES_BACKER payout: 15_000_000 MIST = 10M principal +  5M share  ✓
+NO_ADV     payout:          0      (loser, receipt consumed)    ✓
+advocate bonus / backer bonus = 15M / 5M = 3.000                ✓
+walrus quilt: P1dOdJi1Vu_Ux5sifRAifNrqytBXCQDmoQpyKVPGoHg (6/6)  ✓
+```
+
+Exits non-zero on any missed invariant. There is no demo mode.
 
 ## Quick start (developers)
 
@@ -227,46 +281,23 @@ The Arena's resolver (`/api/resolve`) needs an OpenAI-compatible gateway at
 Embeddings use `GEMINI_API_KEY` if present, otherwise a deterministic local
 fallback.
 
-## What the verifier proves
-
-`verify-v3-flow.mts` runs against the live testnet package and Walrus
-publisher. On every run, it asserts:
-
-- **First-staker advocacy.** Advocate slots lock to the first wallet on each side.
-- **Weighted totals.** YES weighted = `3 × adv.principal + Σ backers`. Same for NO.
-- **Exact-3× bonus.** At equal principal, advocate bonus is **exactly 3×** backer bonus.
-- **Pool drains.** Losing pool fully redistributed; loser's receipt consumed with zero payout.
-- **6/6 audit-trail entries.** `debate · jury · guardrail · verdict · case_law · provenance` all persisted on Walrus.
-
-Latest run output (from PR #17):
-
-```
-YES_ADV    payout: 25_000_000 MIST = 10M principal + 15M share  ✓
-YES_BACKER payout: 15_000_000 MIST = 10M principal +  5M share  ✓
-NO_ADV     payout:          0       (loser, receipt consumed)   ✓
-advocate bonus / backer bonus = 15M / 5M = 3.000                ✓
-walrus quilt: P1dOdJi1Vu_Ux5sifRAifNrqytBXCQDmoQpyKVPGoHg (6/6)  ✓
-```
-
-Exits non-zero on any missed invariant. There is no demo mode.
-
 ## Repository layout
 
 ```
-move/                          Move 2024 package
+move/                          Move 2024 package (5 modules, 50 tests)
   sources/
     case.move                  Case lifecycle, config-hash lock, settlement, seal_approve
     identity.move              Soulbound AgentCard + persona hash + reputation
-    stake.move                 StakePool<T>, StakeReceipt, first-staker advocacy, weighted claim
+    stake.move                 StakePool<T>, StakeReceipt, first-staker advocacy, 3×-weighted claim
     dispute.move               Bonded optimistic dispute + payout
     evidence.move              Walrus ArtifactRef anchoring + certification
-  tests/                       50 unit tests
+  tests/                       50 unit tests (50/50 passing)
 
 sdk/                           TypeScript SDK (@mysten/sui 2.x)
   src/
-    client.ts                  Programmable-transaction builders + event queries
-    agents/                    Stake builders · staker-list · outcomes PTB
-    memory/                    Verifiable case-law layer (Walrus + Seal + 6-entry persist)
+    client.ts                  PTB builders + event queries
+    agents/                    Stake builders · staker-list reader · bundled outcomes PTB
+    memory/                    Verifiable case-law layer: Walrus + Seal + 6-entry persist
   scripts/
     deploy.ts                  Publish package to a network
     verify-v3-flow.mts         v3 end-to-end: first-staker + 3× + 6-entry Quilt
@@ -275,7 +306,7 @@ sdk/                           TypeScript SDK (@mysten/sui 2.x)
     verify-stake.mts           Stake → settle → claim
     seed-arena.ts              Seed Walrus with case-law quilts for /precedent
 
-app/                           Next.js 14 — Tribunal Arena
+app/                           Next.js 14 — Tribunal Arena (87 tests passing)
   src/app/                     Routes: /, /battle/[id], /agents, /agents/[id],
                                        /agents/new, /precedent, /summon, /api/*
   src/components/              LiveTribunalV2, StakeInPanel, AuditTrail,
@@ -284,7 +315,7 @@ app/                           Next.js 14 — Tribunal Arena
                                assemble-case · resolve · persist · provenance
   README.md · DEMO.md          Arena-specific docs + walkthrough
 
-USER_STORY.md                  End-to-end case walkthrough — read this first
+USER_STORY.md                  End-to-end case walkthrough — start here
 MIGRATION-v3.md                v3 contract changes + integration guide
 DEPLOYMENTS.md                 Canonical on-chain deployment record (every digest)
 CONTRIBUTING.md                Toolchain, branch flow, quality bar
@@ -297,14 +328,14 @@ LICENSE                        MIT
 Disputable arbitration for agent societies. Subjective claim review.
 Governance interpretation where text and intent diverge. AI safety scoring
 where the test itself is contested. Content-policy edge cases. Anywhere the
-question is *which frame applies*, not *what happened*.
+question is **which frame applies**, not **what happened**.
 
 ## Status and roadmap
 
 **Current: `v0.3.0-alpha`** — Tribunal v3 stake-gated arbitration is
 feature-complete on testnet. Move (50/50) + SDK (20/20) + App (87/87) all
-green. Full lifecycle (mint → stake both sides → debate → jury → guardrail
-→ 6-entry Walrus Quilt → assert → settle → 3×-weighted claim → dispute)
+green. Full lifecycle — mint → stake both sides → debate → jury → guardrail
+→ 6-entry Walrus Quilt → assert → settle → 3×-weighted claim → dispute —
 verified end-to-end with real testnet digests via
 [`sdk/scripts/verify-v3-flow.mts`](sdk/scripts/verify-v3-flow.mts).
 
