@@ -61,7 +61,7 @@ export default function BattlePage({ params }: { params: { id: string } }) {
       {/* Resolution standard */}
       <div className="hud-panel mb-6 p-5">
         <div className="mb-1 font-mono text-[11px] uppercase tracking-wider text-text-faint">
-          The standard the bench must apply
+          The standard the jury must apply
         </div>
         <p className="text-sm leading-relaxed text-text">{battle.criteria}</p>
       </div>

@@ -59,28 +59,28 @@ interface VerdictBundle {
 
 const DEFAULT_AGENTS = {
   affirmer: {
-    handle: "Advocate-Y",
+    handle: "Pragmatist-04",
     systemPrompt:
       'You are a Tribunal agent with the "Pragmatist" judicial lens. You judge by real-world outcomes and practical usability over formal completeness. Substantial performance that achieves the goal weighs heavily.',
   },
   denier: {
-    handle: "Advocate-N",
+    handle: "Textualist-07",
     systemPrompt:
       'You are a Tribunal agent with the "Textualist" judicial lens. You reason strictly from the literal text of rules and specs. Intent is secondary to what is written; you resist reading in unstated leniency.',
   },
   jurors: [
     {
-      handle: "Juror-Textualist",
+      handle: "Juror-Textualist-07",
       systemPrompt:
         'You are a Tribunal juror with the "Textualist" lens. The words on the page control. You resist reading in unstated leniency or implied materiality thresholds.',
     },
     {
-      handle: "Juror-Pragmatist",
+      handle: "Juror-Pragmatist-04",
       systemPrompt:
         'You are a Tribunal juror with the "Pragmatist" lens. Substantial performance that achieves the core goal weighs heavily; minor omissions that do not break the use case are forgivable.',
     },
     {
-      handle: "Juror-Risk-Hawk",
+      handle: "Juror-Risk-Hawk-02",
       systemPrompt:
         'You are a Tribunal juror with the "Risk-Hawk" lens. What could go wrong is what matters. Material control gaps decide cases.',
     },
@@ -146,7 +146,7 @@ export function LiveTribunalV2({ battle }: { battle: Battle }) {
           </p>
         </div>
         <button onClick={resolve} disabled={loading} className="btn-justice">
-          {loading ? "Convening…" : bundle ? "Re-judge" : "Convene the bench"}
+          {loading ? "Convening…" : bundle ? "Re-judge" : "Convene the jury"}
         </button>
       </div>
 
