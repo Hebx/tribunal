@@ -1,71 +1,111 @@
 // Run with: node --import tsx --test src/lib/server/matchmaking.test.ts
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { matchSides, conscript, type PoolAgent, type Stake } from "./matchmaking";
+import {
+  pickAdvocates,
+  BothSidesMustStake,
+  type PoolAgent,
+  type Stake,
+} from "./matchmaking";
 
-const A: PoolAgent = { agentId: "0xa", handle: "A", score: 100 };
-const B: PoolAgent = { agentId: "0xb", handle: "B", score: 300 };
-const C: PoolAgent = { agentId: "0xc", handle: "C", score: 200 };
-const D: PoolAgent = { agentId: "0xd", handle: "D", score: 150 };
+const A: PoolAgent = { agentId: "0xa", handle: "A", score: 100, archetypeId: "pragmatist" };
+const B: PoolAgent = { agentId: "0xb", handle: "B", score: 300, archetypeId: "textualist" };
+const C: PoolAgent = { agentId: "0xc", handle: "C", score: 200, archetypeId: "intent-first" };
+const D: PoolAgent = { agentId: "0xd", handle: "D", score: 150, archetypeId: "risk-hawk" };
 
-test("both sides staked: picks highest-score staker per side, no conscription", () => {
-  const stakes: Stake[] = [
-    { agent: A, side: "yes" },
-    { agent: B, side: "yes" }, // higher score, should win YES
-    { agent: C, side: "no" },
+test("first stakers are advocates regardless of score", () => {
+  // A (score 100) staked YES first, B (score 300) staked NO first. Even
+  // though B has more rep, the matchmaker uses the on-chain advocate slots,
+  // not a top-by-score scan.
+  const stakers: Stake[] = [
+    { agent: A, side: "yes", amount: 100n, weight: 300n, isAdvocate: true },
+    { agent: B, side: "no",  amount: 100n, weight: 300n, isAdvocate: true },
   ];
-  const m = matchSides(stakes, []);
-  assert.equal(m.affirmer.agentId, "0xb");
-  assert.equal(m.denier.agentId, "0xc");
-  assert.deepEqual(m.conscripted, []);
-});
-
-test("empty NO side: conscripts from pool", () => {
-  const stakes: Stake[] = [{ agent: A, side: "yes" }];
-  const pool = [C, D]; // candidates for the NO side
-  const m = matchSides(stakes, pool, 7);
+  const m = pickAdvocates("0xa", "0xb", stakers, [A, B, C, D]);
   assert.equal(m.affirmer.agentId, "0xa");
-  assert.ok(["0xc", "0xd"].includes(m.denier.agentId));
-  assert.deepEqual(m.conscripted, ["no"]);
-});
-
-test("no stakers at all: conscripts both sides distinctly", () => {
-  const pool = [A, B, C, D];
-  const m = matchSides([], pool, 3);
-  assert.notEqual(m.affirmer.agentId, m.denier.agentId);
-  assert.deepEqual(m.conscripted.sort(), ["no", "yes"]);
-});
-
-test("conscript excludes already-chosen agents", () => {
-  const pool = [A, B];
-  // YES staked by A, NO must conscript from pool excluding A -> must be B
-  const m = matchSides([{ agent: A, side: "yes" }], pool, 1);
   assert.equal(m.denier.agentId, "0xb");
+  assert.deepEqual(m.backers, { yes: [], no: [] });
 });
 
-test("throws when a side cannot be filled", () => {
-  // YES staked, NO empty, pool only contains the YES agent -> cannot fill NO
-  assert.throws(() => matchSides([{ agent: A, side: "yes" }], [A]), /cannot fill NO/);
+test("backers on a side are listed but not advocates", () => {
+  const stakers: Stake[] = [
+    { agent: A, side: "yes", amount: 100n, weight: 300n, isAdvocate: true },   // YES advocate
+    { agent: C, side: "yes", amount: 100n, weight: 100n, isAdvocate: false },  // YES backer
+    { agent: B, side: "no",  amount: 100n, weight: 300n, isAdvocate: true },   // NO advocate
+    { agent: D, side: "no",  amount: 100n, weight: 100n, isAdvocate: false },  // NO backer
+  ];
+  const m = pickAdvocates("0xa", "0xb", stakers, [A, B, C, D]);
+  assert.equal(m.affirmer.agentId, "0xa");
+  assert.equal(m.denier.agentId, "0xb");
+  assert.equal(m.backers.yes.length, 1);
+  assert.equal(m.backers.yes[0].agentId, "0xc");
+  assert.equal(m.backers.no.length, 1);
+  assert.equal(m.backers.no[0].agentId, "0xd");
 });
 
-test("conscript is deterministic for a fixed seed", () => {
-  const pool = [A, B, C, D];
-  const first = conscript(pool, [], 42);
-  const second = conscript(pool, [], 42);
-  assert.equal(first?.agentId, second?.agentId);
-});
-
-test("conscript returns undefined when pool exhausted by exclusions", () => {
-  const pool = [A, B];
-  assert.equal(conscript(pool, ["0xa", "0xb"], 1), undefined);
-});
-
-test("conscript is reputation-weighted (higher score wins more often)", () => {
-  const pool = [A, B]; // A=100, B=300 -> B should win ~75% of the time
-  let bWins = 0;
-  for (let seed = 0; seed < 400; seed++) {
-    if (conscript(pool, [], seed)?.agentId === "0xb") bWins++;
+test("BothSidesMustStake when YES side is unstaked", () => {
+  const stakers: Stake[] = [
+    { agent: B, side: "no", amount: 100n, weight: 300n, isAdvocate: true },
+  ];
+  try {
+    pickAdvocates(null, "0xb", stakers, [A, B]);
+    assert.fail("should have thrown");
+  } catch (err) {
+    assert.ok(err instanceof BothSidesMustStake);
+    assert.deepEqual((err as BothSidesMustStake).emptySides, ["yes"]);
   }
-  // expect roughly 0.75; assert a loose band to avoid flakiness
-  assert.ok(bWins > 240 && bWins < 360, `B won ${bWins}/400`);
+});
+
+test("BothSidesMustStake when NO side is unstaked", () => {
+  const stakers: Stake[] = [
+    { agent: A, side: "yes", amount: 100n, weight: 300n, isAdvocate: true },
+  ];
+  try {
+    pickAdvocates("0xa", null, stakers, [A, B]);
+    assert.fail("should have thrown");
+  } catch (err) {
+    assert.ok(err instanceof BothSidesMustStake);
+    assert.deepEqual((err as BothSidesMustStake).emptySides, ["no"]);
+  }
+});
+
+test("BothSidesMustStake lists every empty side", () => {
+  try {
+    pickAdvocates(null, null, [], [A, B]);
+    assert.fail("should have thrown");
+  } catch (err) {
+    assert.ok(err instanceof BothSidesMustStake);
+    assert.deepEqual((err as BothSidesMustStake).emptySides.sort(), ["no", "yes"]);
+  }
+});
+
+test("throws when advocate id is missing from the agent pool", () => {
+  // Pool doesn't include "0xa"; this is a chain-state-vs-cache inconsistency
+  // and must surface, not silently match against undefined.
+  assert.throws(
+    () => pickAdvocates("0xa", "0xb", [], [B]),
+    /advocate YES \(0xa\) not in agent pool/,
+  );
+});
+
+test("throws when both advocate ids collapse to the same agent", () => {
+  // Pathological case the on-chain anti-double-stake invariant should already
+  // prevent. Still, the matchmaker refuses rather than producing a bogus debate.
+  assert.throws(
+    () => pickAdvocates("0xa", "0xa", [], [A]),
+    /same agent/,
+  );
+});
+
+test("ignores stakes whose agent id is not in the pool (silent drop)", () => {
+  // If an AgentCard was burned/transferred after stake, the staker entry
+  // can name an id the global pool no longer carries. Drop those backers
+  // rather than reject the matchup.
+  const stakers: Stake[] = [
+    { agent: A, side: "yes", amount: 100n, weight: 300n, isAdvocate: true },
+    { agent: { agentId: "0xZZZ", handle: "ghost", score: 0 }, side: "yes" },
+    { agent: B, side: "no", amount: 100n, weight: 300n, isAdvocate: true },
+  ];
+  const m = pickAdvocates("0xa", "0xb", stakers, [A, B]);
+  assert.equal(m.backers.yes.length, 0); // ghost dropped
 });
