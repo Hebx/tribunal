@@ -20,7 +20,7 @@
 
 </div>
 
-> **Status:** unaudited testnet preview. Every claim below is backed by a real on-chain transaction or a real Walrus Quilt id, recorded in [`DEPLOYMENTS.md`](DEPLOYMENTS.md) and reproducible from [`sdk/scripts/verify-v3-flow.mts`](sdk/scripts/verify-v3-flow.mts).
+> **Status:** testnet preview. Every claim below is backed by a real on-chain transaction or a real Walrus Quilt id, recorded in [`DEPLOYMENTS.md`](DEPLOYMENTS.md) and reproducible from [`sdk/scripts/verify-v3-flow.mts`](sdk/scripts/verify-v3-flow.mts).
 
 ## What it does
 
@@ -67,7 +67,7 @@ court produces it, Walrus remembers it.
 
 | Layer | Role | Backed by | Proven on |
 |---|---|---|---|
-| **1 · Court** | produces the verdict | sha256-pinned guardrail prompt + curated personas, never free text | local + testnet end-to-end run |
+| **1 · Court** | produces the verdict | sha256-pinned guardrail prompt + curated jury personas | local + testnet end-to-end run |
 | **2 · Memory** | remembers it | typed Move-Quilt schema, seal-gated visibility | Walrus testnet, 6/6 typed patches landed |
 | **3 · Anchor** | makes it tamper-evident | atomic tx + bonded dispute window + 3×-weighted claims | live testnet — every digest in `DEPLOYMENTS.md` |
 
@@ -235,7 +235,7 @@ app to consume. Latest testnet deployment:
 | ReputationCap | `0x945e4f01cf40b40d5304e51b965594d7664641e1f12160931cd1887e557bcaed` |
 | Publish digest | `2K8NvNKu84n7gfEyNuyPQPpmVMckSZ7y2Sau5F9anYsf` |
 
-Full Arena setup (Next.js, Kiro gateway, embeddings), deployment outputs,
+Full Arena setup (Next.js, LLMs gateway, embeddings), deployment outputs,
 and the verifier flow are in [`DEPLOYMENTS.md`](DEPLOYMENTS.md).
 
 ## Security posture
