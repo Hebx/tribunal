@@ -113,7 +113,7 @@ export default function BattlePage({ params }: { params: { id: string } }) {
 
       {/* Stake-in: wallet-signed opt-in PvP (v2 M5.3) */}
       {battle.caseId && (
-        <div className="mb-6">
+        <div id="stake-in-panel" className="mb-6">
           <StakeInPanel caseId={battle.caseId} />
         </div>
       )}
