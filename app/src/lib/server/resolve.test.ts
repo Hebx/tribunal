@@ -34,8 +34,8 @@ function mockFetch() {
     let payload: any;
     if (/ADVOCATE/.test(sys)) {
       payload = { claim: "c", reasoning: "r", rebuttal: "" };
-    } else if (/GUARDRAIL JUDGE/.test(sys)) {
-      payload = { finalOutcome: true, ratifiedJury: true, overrideReason: "", biasFlags: [], confidence: 0.8, reasoning: "sound" };
+    } else if (/binding judge/.test(sys)) {
+      payload = { finalOutcome: true, ratifiedJury: true, overrideReason: "", biasFlags: [], confidence: 0.8, reasoning: "sound", personaTrapsRejected: [] };
     } else {
       // juror — Textualist votes NO, others YES → a real split
       const v = /Textualist/.test(sys) ? false : true;
@@ -79,8 +79,8 @@ test("resolveCase finalOutcome follows the guardrail, not the jury", async () =>
     const sys = body.messages.find((m: any) => m.role === "system").content;
     let payload: any;
     if (/ADVOCATE/.test(sys)) payload = { claim: "c", reasoning: "r", rebuttal: "" };
-    else if (/GUARDRAIL JUDGE/.test(sys))
-      payload = { finalOutcome: false, ratifiedJury: false, overrideReason: "criteria require exact match", biasFlags: ["verbosity"], confidence: 0.7, reasoning: "override" };
+    else if (/binding judge/.test(sys))
+      payload = { finalOutcome: false, ratifiedJury: false, overrideReason: "criteria require exact match", biasFlags: ["verbosity"], confidence: 0.7, reasoning: "override", personaTrapsRejected: ["rhetoric: emotional framing"] };
     else payload = { vote: true, confidence: 0.8, rationale: "yes" };
     return { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: JSON.stringify(payload) } }] }), text: async () => "" } as any;
   }) as any;

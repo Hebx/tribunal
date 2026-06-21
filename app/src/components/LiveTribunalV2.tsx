@@ -1,16 +1,20 @@
 "use client";
 
-// LiveTribunal v2 — the persona-debate panel.
+// LiveTribunal v2 — the persona-debate panel (v3 stake-gated).
 //
-// Hits POST /api/resolve and renders the full VerdictBundle:
+// Hits POST /api/resolve with `{ caseId, rounds }`. The server resolves the
+// matchup, jury, and personas from on-chain state — this component no longer
+// ships any system prompts. Renders the full VerdictBundle:
 //   - debate transcript (round-by-round, both sides)
 //   - jury first pass + final votes + dissent + disagreement rate
 //   - guardrail judge ratification / override + bias flags + binding verdict
 //
-// The advocates and jurors are derived from a small archetype mix on the
-// client; for a real case the owner-staked agents and their personas would be
-// passed in from the parent. This component degrades gracefully if /api/resolve
-// is not configured (no gateway key) — it surfaces the error inline.
+// Error handling:
+//   - 409 BothSidesMustStake → inline call-to-action pointing at the stake
+//     panel (scrolls into view) — the case is gated until both sides have an
+//     advocate.
+//   - 404 NoCaseInput / no pool → surfaces the server's message verbatim.
+//   - Other failures degrade gracefully (no gateway key, model error, etc.).
 
 import { useState } from "react";
 import type { Battle } from "@/lib/types";
@@ -46,6 +50,7 @@ interface GuardrailDecision {
   biasFlags: string[];
   confidence: number;
   reasoning: string;
+  personaTrapsRejected: string[];
 }
 interface VerdictBundle {
   debate: { rounds: DebateRound[] };
@@ -54,38 +59,16 @@ interface VerdictBundle {
   finalOutcome: boolean;
   models: { advocate: string; jury: string; guardrail: string };
   configHashHex: string;
+  guardrailConfigHash: string;
   decidedAt: number;
 }
 
-const DEFAULT_AGENTS = {
-  affirmer: {
-    handle: "Pragmatist-04",
-    systemPrompt:
-      'You are a Tribunal agent with the "Pragmatist" judicial lens. You judge by real-world outcomes and practical usability over formal completeness. Substantial performance that achieves the goal weighs heavily.',
-  },
-  denier: {
-    handle: "Textualist-07",
-    systemPrompt:
-      'You are a Tribunal agent with the "Textualist" judicial lens. You reason strictly from the literal text of rules and specs. Intent is secondary to what is written; you resist reading in unstated leniency.',
-  },
-  jurors: [
-    {
-      handle: "Juror-Textualist-07",
-      systemPrompt:
-        'You are a Tribunal juror with the "Textualist" lens. The words on the page control. You resist reading in unstated leniency or implied materiality thresholds.',
-    },
-    {
-      handle: "Juror-Pragmatist-04",
-      systemPrompt:
-        'You are a Tribunal juror with the "Pragmatist" lens. Substantial performance that achieves the core goal weighs heavily; minor omissions that do not break the use case are forgivable.',
-    },
-    {
-      handle: "Juror-Risk-Hawk-02",
-      systemPrompt:
-        'You are a Tribunal juror with the "Risk-Hawk" lens. What could go wrong is what matters. Material control gaps decide cases.',
-    },
-  ],
-};
+/** Scroll the stake panel into view; called when the gated 409 lands. */
+function scrollToStakePanel() {
+  if (typeof document === "undefined") return;
+  const el = document.getElementById("stake-in-panel");
+  if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+}
 
 function Pct({ x }: { x: number }) {
   return <span>{Math.round(x * 100)}%</span>;
@@ -106,30 +89,34 @@ export function LiveTribunalV2({ battle }: { battle: Battle }) {
   const [bundle, setBundle] = useState<VerdictBundle | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [gated, setGated] = useState<{ emptySides: ("yes" | "no")[] } | null>(null);
   const [phase, setPhase] = useState<string>("");
 
   async function resolve() {
+    if (!battle.caseId) {
+      setError("This battle has no on-chain caseId — cannot resolve.");
+      return;
+    }
     setLoading(true);
     setError(null);
     setBundle(null);
+    setGated(null);
     setPhase("debate");
     try {
       const res = await fetch("/api/resolve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          question: battle.challenge,
-          criteria: battle.criteria,
-          evidence: battle.evidence,
-          ...DEFAULT_AGENTS,
-          rounds: 2,
-        }),
+        body: JSON.stringify({ caseId: battle.caseId, rounds: 2 }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "resolve failed");
+      if (res.status === 409 && data?.code === "BothSidesMustStake") {
+        setGated({ emptySides: data.emptySides ?? [] });
+        return;
+      }
+      if (!res.ok) throw new Error(data?.error ?? `resolve failed (HTTP ${res.status})`);
       setBundle(data.bundle);
-    } catch (e: any) {
-      setError(String(e?.message ?? e));
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
       setPhase("");
@@ -158,6 +145,23 @@ export function LiveTribunalV2({ battle }: { battle: Battle }) {
           <p className="text-sm text-text-muted">
             {phase === "debate" ? "Advocates are arguing both sides…" : "Deliberating…"}
           </p>
+        </div>
+      )}
+
+      {gated && (
+        <div className="hud-panel mb-4 border-gold/50 p-5">
+          <div className="mb-2 font-mono text-[11px] uppercase tracking-wider text-gold">
+            ⚑ stake required
+          </div>
+          <p className="mb-3 text-sm text-text">
+            Both sides need a staked agent before this case can be judged.{" "}
+            <span className="text-text-muted">
+              Missing: {gated.emptySides.map((s) => s.toUpperCase()).join(" + ")}
+            </span>
+          </p>
+          <button onClick={scrollToStakePanel} className="btn-justice">
+            Stake first ↗
+          </button>
         </div>
       )}
 
@@ -209,6 +213,21 @@ export function LiveTribunalV2({ battle }: { battle: Battle }) {
                     ⚑ {f}
                   </span>
                 ))}
+              </div>
+            )}
+            {bundle.guardrail.personaTrapsRejected.length > 0 && (
+              <div className="mt-3 text-left">
+                <div className="mb-1 font-mono text-[10px] uppercase tracking-wider text-text-faint">
+                  Persona traps rejected
+                </div>
+                <ul className="space-y-1 text-[11px] text-text-muted">
+                  {bundle.guardrail.personaTrapsRejected.map((t, i) => (
+                    <li key={i} className="flex gap-2">
+                      <span className="text-gold">↳</span>
+                      <span>{t}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
           </div>
@@ -284,12 +303,15 @@ export function LiveTribunalV2({ battle }: { battle: Battle }) {
             <p className="text-[13px] leading-relaxed text-text">{bundle.guardrail.reasoning}</p>
           </div>
 
-          {/* Config hash */}
-          <div className="text-center font-mono text-[10px] text-text-faint">
-            resolver config hash · {bundle.configHashHex.slice(0, 16)}…{" "}
-            <span className="text-text-muted">
-              ({bundle.models.advocate} / {bundle.models.jury} / {bundle.models.guardrail})
-            </span>
+          {/* Config hashes */}
+          <div className="space-y-1 text-center font-mono text-[10px] text-text-faint">
+            <div>
+              resolver config hash · {bundle.configHashHex.slice(0, 16)}…{" "}
+              <span className="text-text-muted">
+                ({bundle.models.advocate} / {bundle.models.jury} / {bundle.models.guardrail})
+              </span>
+            </div>
+            <div>guardrail prompt hash · {bundle.guardrailConfigHash.slice(0, 16)}…</div>
           </div>
         </div>
       )}
