@@ -167,3 +167,59 @@ export function buildRegisterAgent(archetypeId: string, personaHashHex: string):
   });
   return tx;
 }
+
+// ---------- stake module (v2 M5) ----------
+
+/** stake::create_pool<T>(case, ctx) — shares a StakePool bound to the Case. */
+export function buildCreateStakePool(caseId: string, bondType = SUI_TYPE): Transaction {
+  const tx = new Transaction();
+  tx.moveCall({
+    target: `${PACKAGE_ID}::stake::create_pool`,
+    typeArguments: [bondType],
+    arguments: [tx.object(caseId)],
+  });
+  return tx;
+}
+
+/**
+ * stake::stake<T>(pool, agent_card, side_true, payment, ctx)
+ * Splits the stake off gas (SUI default). Mints a non-transferable StakeReceipt
+ * back to the signer.
+ */
+export function buildStakeOnSide(
+  poolId: string,
+  agentCardId: string,
+  sideTrue: boolean,
+  amountMist: bigint,
+  bondType = SUI_TYPE,
+): Transaction {
+  const tx = new Transaction();
+  const [stakeCoin] = tx.splitCoins(tx.gas, [tx.pure.u64(amountMist)]);
+  tx.moveCall({
+    target: `${PACKAGE_ID}::stake::stake`,
+    typeArguments: [bondType],
+    arguments: [
+      tx.object(poolId),
+      tx.object(agentCardId),
+      tx.pure.bool(sideTrue),
+      stakeCoin,
+    ],
+  });
+  return tx;
+}
+
+/** stake::claim_winnings<T>(pool, case, receipt, ctx) — burns the receipt. */
+export function buildClaimWinnings(
+  poolId: string,
+  caseId: string,
+  receiptId: string,
+  bondType = SUI_TYPE,
+): Transaction {
+  const tx = new Transaction();
+  tx.moveCall({
+    target: `${PACKAGE_ID}::stake::claim_winnings`,
+    typeArguments: [bondType],
+    arguments: [tx.object(poolId), tx.object(caseId), tx.object(receiptId)],
+  });
+  return tx;
+}

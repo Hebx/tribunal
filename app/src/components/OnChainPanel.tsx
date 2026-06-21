@@ -4,17 +4,25 @@ import { useState } from "react";
 import type { Battle } from "@/lib/types";
 
 // Honest disclosure of what's actually on-chain vs Walrus vs UI. Credibility >
-// looking maximally decentralized. Verified against move/sources/case.move.
+// looking maximally decentralized. Verified against move/sources (v2 deployment).
 const ROWS: { field: string; where: "chain" | "walrus" | "ui" }[] = [
-  { field: "Case lifecycle + outcome (yes/no)", where: "chain" },
-  { field: "Locked committee config hash", where: "chain" },
+  // ---- on-chain: identity + verdict + bond + stake + reputation ----
+  { field: "Soulbound AgentCard + persona hash", where: "chain" },
+  { field: "Outcome-based reputation score (cap-gated)", where: "chain" },
+  { field: "Stake pool + StakeReceipt + claim payout math", where: "chain" },
+  { field: "Case lifecycle + binding outcome (yes/no)", where: "chain" },
+  { field: "Locked resolver config hash (advocate/jury/guardrail models)", where: "chain" },
   { field: "Memory namespace pointer", where: "chain" },
   { field: "Resolver bond + dispute window", where: "chain" },
   { field: "Evidence anchor (blob id + sha256)", where: "chain" },
+  // ---- Walrus: deliberation + reasoning (sealed until settle) + case law ----
+  { field: "Debate transcript (sealed until settle)", where: "walrus" },
+  { field: "Jury first-pass + final votes + dissent (sealed until settle)", where: "walrus" },
+  { field: "Guardrail ruling + bias flags + reasoning", where: "walrus" },
+  { field: "Typed case law (precedent for future panels)", where: "walrus" },
   { field: "Question + evidence text", where: "walrus" },
-  { field: "Per-judge votes + rationale", where: "walrus" },
-  { field: "Typed case law (precedent)", where: "walrus" },
-  { field: "Advocates (yes/no framing)", where: "ui" },
+  // ---- UI: framing only ----
+  { field: "Advocates' yes/no framing (UI label, not on-chain semantics)", where: "ui" },
 ];
 
 const TONE: Record<string, string> = {
