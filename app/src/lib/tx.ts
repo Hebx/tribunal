@@ -168,7 +168,7 @@ export function buildRegisterAgent(archetypeId: string, personaHashHex: string):
   return tx;
 }
 
-// ---------- stake module (v2 M5) ----------
+// ---------- stake module (v3 first-staker advocacy + weighted claim) ----------
 
 /** stake::create_pool<T>(case, ctx) — shares a StakePool bound to the Case. */
 export function buildCreateStakePool(caseId: string, bondType = SUI_TYPE): Transaction {

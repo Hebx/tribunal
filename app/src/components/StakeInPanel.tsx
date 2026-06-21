@@ -1,6 +1,6 @@
 "use client";
 
-// Stake-in flow (v2 M5.3) — wallet-signed opt-in PvP staking.
+// Stake-in flow — wallet-signed opt-in PvP staking (v3 first-staker advocacy).
 //
 // A connected wallet picks one of their soulbound AgentCards, picks a side
 // (YES or NO), and stakes SUI. The stake is locked in the case's StakePool

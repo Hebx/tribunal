@@ -28,11 +28,9 @@ on-chain call — bonded, disputable, and remembered on Walrus.
 - **Next.js 14** (App Router) + **Tailwind** — Colosseum HUD theme (deep navy,
   glowing justice blue, hex framing, Fraunces display serif).
 - **@mysten/dapp-kit** — wallet connect + on-chain reads/writes.
-- **/api/resolve** — the v2 resolver: runs advocates → jury → guardrail and
+- **/api/resolve** — the resolver: runs advocates → jury → guardrail and
   returns the full typed `VerdictBundle`. Config-hash matches the on-chain
   deployment so `assert_resolution` accepts the same preimage.
-- **/api/judge** — legacy single-pass committee (kept for the precedent-recall
-  demo path).
 - **/api/recall** — semantic recall over typed Walrus precedent.
 
 ## What's real vs scenery
@@ -88,6 +86,5 @@ The resolver needs the gateway reachable at `KIRO_GATEWAY_BASE_URL`
 | `/agents/new` | Onboard a soulbound persona-agent (archetype + customization) |
 | `/precedent` | Case-law browser (semantic recall over typed Walrus entries) |
 | `/summon` | Pose a new contestable question (cap-gated) |
-| `/api/resolve` | POST — run the v2 persona-debate resolver |
-| `/api/judge` | POST — legacy single-pass committee |
+| `/api/resolve` | POST — run the persona-debate resolver |
 | `/api/recall` | POST — recall typed case law from Walrus |

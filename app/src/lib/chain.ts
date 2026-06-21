@@ -1,5 +1,5 @@
 // On-chain deployment coordinates + event identifiers.
-// Mirrors ../../../deployment.testnet.json (the live Tribunal package).
+// Mirrors DEPLOYMENTS.md → v3 first-staker advocacy + weighted-claim package.
 
 export const NETWORK = (process.env.NEXT_PUBLIC_SUI_NETWORK ?? "testnet") as
   | "testnet"
@@ -9,23 +9,23 @@ export const NETWORK = (process.env.NEXT_PUBLIC_SUI_NETWORK ?? "testnet") as
 
 export const PACKAGE_ID =
   process.env.NEXT_PUBLIC_TRIBUNAL_PACKAGE_ID ??
-  "0x2c8697803b3eec5b8e0e0391a4f1dacb0760a904ed67add840d94452b1cd3750";
+  "0x88eeb06e6d45c0edcbbaf965500d5429dc4d43a76072962560700d1a77efdd89";
 
 export const CREATOR_CAP_ID =
   process.env.NEXT_PUBLIC_TRIBUNAL_CREATOR_CAP ??
-  "0x56bc017bbac4b09e096bab13f59ae1c0a0fa899a1777d6dec919bfd39a560283";
+  "0xa93b590ab0e9983d30dfe2af4e73673d80cf6ae44dfe6223831af635aad1988e";
 
 /** ReputationCap — gates identity::record_outcome (held by the resolver). */
 export const REPUTATION_CAP_ID =
   process.env.NEXT_PUBLIC_TRIBUNAL_REPUTATION_CAP ??
-  "0x50535871e26ecec2d33e589909729493179bcc7727712c996fb9041f486999a7";
+  "0x945e4f01cf40b40d5304e51b965594d7664641e1f12160931cd1887e557bcaed";
 
 /** Deployer address holding CaseCreatorCap — gates create_case / assert_resolution. */
 export const CAP_HOLDER =
   process.env.NEXT_PUBLIC_TRIBUNAL_CAP_HOLDER ??
   "0x36939a27ef7eb60fa31aae905f2f7cbed8940c98c8178affc8ae154acabbc1d4";
 
-export const PUBLISH_DIGEST = "BvtYpFAZ9EyDSLVMJatwuYYHhPyZ7cLf8J8TvkuPAhGB";
+export const PUBLISH_DIGEST = "2K8NvNKu84n7gfEyNuyPQPpmVMckSZ7y2Sau5F9anYsf";
 
 /** Event type suffixes emitted by the package. */
 export const EVENTS = {
@@ -53,6 +53,9 @@ export function explorerTx(digest: string): string {
 }
 export function explorerObject(id: string): string {
   return `https://suiscan.xyz/${NETWORK}/object/${id}`;
+}
+export function explorerAddress(addr: string): string {
+  return `https://suiscan.xyz/${NETWORK}/account/${addr}`;
 }
 export const WALRUS_AGGREGATOR =
   process.env.NEXT_PUBLIC_WALRUS_AGGREGATOR ??

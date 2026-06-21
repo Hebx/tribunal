@@ -82,7 +82,7 @@ Set these in **Project Settings → Environment Variables**. Mark them for
 |---|---|---|
 | `WALRUS_PUBLISHER` | unset | If unset, `/api/resolve` returns `audit: { ok: false }` but the verdict still ships. Set to a Walrus publisher URL to land typed quilts. |
 | `WALRUS_AGGREGATOR` | unset | Same; needed to read sealed entries server-side. |
-| `NEXT_PUBLIC_WALRUS_AGGREGATOR` | unset | Client-side aggregator URL for the legacy committee precedent recall. |
+| `NEXT_PUBLIC_WALRUS_AGGREGATOR` | unset | Client-side aggregator URL for precedent recall. |
 
 ### Optional — model overrides
 
