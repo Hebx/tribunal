@@ -58,3 +58,43 @@ Reproduce assert+record: `cd sdk && node --import tsx scripts/verify-outcomes.mt
 - final state: pool balances drained to 0; winner received `0.01 + 0.005 = 0.015 SUI` ✓
 
 Reproduce stake flow: `cd sdk && node --import tsx scripts/verify-stake.mts`
+
+### v3 — first-staker advocacy + weighted claim (testnet)
+
+- **Package ID:** `0x88eeb06e6d45c0edcbbaf965500d5429dc4d43a76072962560700d1a77efdd89`
+- **CaseCreatorCap:** `0xa93b590ab0e9983d30dfe2af4e73673d80cf6ae44dfe6223831af635aad1988e`
+- **ReputationCap:** `0x945e4f01cf40b40d5304e51b965594d7664641e1f12160931cd1887e557bcaed`
+- **Publish digest:** `2K8NvNKu84n7gfEyNuyPQPpmVMckSZ7y2Sau5F9anYsf`
+
+Schema changes vs v2 (breaking — fresh package, v2 pools/cards stay valid against the old package):
+- `StakePool` adds `advocate_yes: Option<ID>`, `advocate_no: Option<ID>` (set once on first stake per side, immutable), `yes/no_weighted_total` (advocate weight 3.00× via `ADVOCATE_BOOST_BPS = 30_000`; backer 1.00× via `BACKER_BPS = 10_000`), and `stakes: vector<StakeRecord>` (full off-chain matchmaking payload in one RPC).
+- `StakeReceipt` adds `weight` + `is_advocate`; `claim_winnings` share math is now `weight × losing_total / winning_weighted_total` (single denominator preserves the rounding-crumb invariant).
+- New views: `advocate_yes_id`, `advocate_no_id`, `yes/no_weighted_total`, `list_stakers`.
+
+Stake-flow lifecycle verified end-to-end:
+- `register_agent` (affirmer) `7XN3EJfsz44Cme7Zy2Qo5n9CuZRYQZvNti1ptmBsGyPh`
+- `register_agent` (denier) `5PXEBsAmHAPjbfQmrdgjsTVFbzyZHNkGjawDK8hnuPdj`
+- `create_case` `4eTtbXURamzBcoy67LJUqtuVJjDZTBAtbDUtNw9Mww78`
+- `stake::create_pool` `EvnHAL85kuCyqyKYiKK6ECUKJvzNWadvc49bgMpzUtiJ` → pool `0x00b3e99ff63884bc48db5dac2d19b1e022956686bc93cd43f942cedfa0703e70`
+- `stake YES 0.01 SUI` (advocate, weight 0.03 SUI) `DkySvf2kZ4dxjNEEnSEkptTghe7FKzyu5ezye6tJ8Uv9`
+- `stake NO 0.005 SUI` (advocate, weight 0.015 SUI) `FEmdeW5pKoy6UQLRjQYzJGGXFcjbcPSuJXvZBzJU3Twj`
+- `assert (YES) + 2x record_outcome` (bundled) `GJZmaEGFrFLShrPFjxxTnjAu2osEP9nKAvoMiTmiWK99`
+- `settle` `DHRGiKEJvFeoFD3UG4Borv3HwLKMCDk778wgCdFX3LTZ`
+- `claim_winnings (YES advocate wins, gets principal + full losing pool)` `8Z4kQ3AxGPRfsG2w7MLqSnp2UpebBCcjXKUfViA4xDD5`
+- `claim_winnings (NO advocate loser, receipt consumed, zero payout)` `3bGHrU1HA6LthM8Acmdde77nSfh1Y2rZQXuxV3yTAEex`
+- final state: pool balances 0; winner received `0.01 + 0.005 = 0.015 SUI` ✓
+
+Pool inspection — confirms first-staker advocate slots + 3× weight on the live pool (verifier output):
+```
+yesTotal          10_000_000   yesWeightedTotal  30_000_000
+noTotal            5_000_000   noWeightedTotal   15_000_000
+advocateYesId     0xfadc6cf6…b380ef390…  (Pragmatist, weight 30_000_000)
+advocateNoId      0x1679b486…e6523368…   (Textualist, weight 15_000_000)
+```
+
+3× boost numeric proof (from `move/tests stake_tests::test_advocate_share_is_triple_backer_when_stakes_equal`):
+equal stakes of 100 each (advocate YES + backer YES + advocate NO, YES wins) →
+advocate payout 175 = 100 principal + 75 share; backer payout 125 = 100 principal + 25 share. 75 == 3×25 ✓, sum of shares = 100 = losing_total ✓.
+
+Reproduce v3 stake flow: `cd sdk && TRIBUNAL_NETWORK=testnet pnpm run deploy && node --import tsx scripts/verify-stake.mts`
+Reproduce list-stakers read: `cd sdk && node --import tsx scripts/verify-list-stakers.mts <POOL_ID>`

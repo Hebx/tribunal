@@ -92,6 +92,31 @@ test("readStakerList: decodes bare-array Option form", async () => {
   assert.equal(s.stakers.length, 1);
 });
 
+test("readStakerList: decodes bare-string Option form (SuiJsonRpcClient v2)", async () => {
+  // This is what testnet actually returned for the v3 pool deployed in Task 1.6.
+  const client = makeClient({
+    dataType: "moveObject",
+    fields: {
+      case_id: CASE,
+      yes_total: "10000000",
+      no_total: "5000000",
+      yes_weighted_total: "30000000",
+      no_weighted_total: "15000000",
+      advocate_yes: ADVOCATE_YES,    // bare string, NOT an array, NOT a boxed Option
+      advocate_no:  ADVOCATE_NO,
+      stakes: [
+        { agent_id: ADVOCATE_YES, side_true: true,  amount: "10000000", weight: "30000000", is_advocate: true },
+        { agent_id: ADVOCATE_NO,  side_true: false, amount: "5000000",  weight: "15000000", is_advocate: true },
+      ],
+    },
+  });
+  const s = await readStakerList(client, POOL);
+  assert.equal(s.advocateYesId, ADVOCATE_YES);
+  assert.equal(s.advocateNoId,  ADVOCATE_NO);
+  assert.equal(s.stakers.length, 2);
+  assert.equal(s.stakers[0].weight, 30_000_000n);
+});
+
 test("readStakerList: tags advocates and backers separately", async () => {
   // YES side: advocate stakes 100 (w=300), backer stakes 100 (w=100).
   const client = makeClient({
