@@ -97,4 +97,41 @@ equal stakes of 100 each (advocate YES + backer YES + advocate NO, YES wins) →
 advocate payout 175 = 100 principal + 75 share; backer payout 125 = 100 principal + 25 share. 75 == 3×25 ✓, sum of shares = 100 = losing_total ✓.
 
 Reproduce v3 stake flow: `cd sdk && TRIBUNAL_NETWORK=testnet pnpm run deploy && node --import tsx scripts/verify-stake.mts`
+
+#### v3 full flow — first-staker advocacy + 3× bonus + 6-entry Walrus Quilt
+
+Asserts on a live testnet+Walrus run: advocate slots locked to first staker each side, weighted totals = `3×adv + Σbacker`, **advocate bonus exactly 3× backer bonus at equal stake**, losing pool fully drained, and **all 6 typed Walrus patches** persisted (`debate / jury / guardrail / verdict / case_law / provenance`).
+
+- `create_case` `DVCoDpGZiriruZ3EP1JFWDeBfyH5Hv5xa65HSXuAnW7i`
+- `stake::create_pool` `2aBTFc3SfPTZYZP5zHL1JL9bXD5Twswe6qgKZ2wUsrW7` → pool `0x350295d4dc5112ae399e247c864e6cbeda3421cb120a363035ccb02c2f1b56e4`
+- `stake YES_ADV 0.01 SUI` (1st YES) `2PPFLDLVQwnPsBkrVHR49YDcazazmAt7arrPAKQaKqxu`
+- `stake YES_BACKER 0.01 SUI` (2nd YES) `H7FxBSfu3cQ6gEjDF4gBkUsWE1fx2QnnrCbyr694kGG6`
+- `stake NO_ADV 0.02 SUI` (1st NO) `6atcvdYKdscJmuDgFDaJym9PHFuY7r4fpjoD2mDN5KvX`
+- `assert (YES) + 3x record_outcome` (bundled) `6rrhdbPvFftiRMS85hmKGk3hmgBVMFfrH4dJZECko1NQ`
+- `settle` `CsrcULtkUmHMbsG3qL2Yg7WKYhqQ3We1bwLP8uDFe3TZ`
+- `claim YES_ADV` `ChCLXEBvYP3HA57ojZmmFXRjWB58E3KUokNDgaqLman1`
+- `claim YES_BACKER` `FpBYg7c2DQwn9PNMzND9S7HEuXWdGvPNKGPee8kkPDZd`
+- `claim NO_ADV (loser, no payout)` `HrhPwbUUfB4CZzsQF24nD3ET5yr2LuKfTmFDgkMGXmoD`
+
+Live payouts (gross, gas-stripped, MIST):
+```
+YES_ADV    : 25_000_000   = 10_000_000 principal + 15_000_000 share   (3 × 10M / 40M × 20M)
+YES_BACKER : 15_000_000   = 10_000_000 principal +  5_000_000 share   (1 × 10M / 40M × 20M)
+NO_ADV     :          0   (loser, receipt consumed)
+
+advocate bonus / backer bonus = 15_000_000 / 5_000_000 = 3.000 ✓
+```
+
+Walrus audit-trail quilt: `P1dOdJi1Vu_Ux5sifRAifNrqytBXCQDmoQpyKVPGoHg` with 6 typed patches:
+```
+debate     : debate__0xf7b15c1b3045644a0a11e4f34612a1
+jury       : jury__0xf7b15c1b3045644a0a11e4f34612a1
+guardrail  : guardrail__0xf7b15c1b3045644a0a11e4f34612a1
+verdict    : verdict__0xf7b15c1b3045644a0a11e4f34612a1
+case_law   : caselaw__0xf7b15c1b3045644a0a11e4f34612a1
+provenance : provenance__0xf7b15c1b3045644a0a11e4f34612a1
+```
+
+Reproduce: `cd sdk && node --import tsx scripts/verify-v3-flow.mts`
+
 Reproduce list-stakers read: `cd sdk && node --import tsx scripts/verify-list-stakers.mts <POOL_ID>`

@@ -15,7 +15,7 @@
 //     overturn via identity::record_outcome (handled by the off-chain bundler).
 //
 // Anti-double-stake: an agent can stake at most ONCE per pool (tracked in a
-// vector — O(n) in stakers, fine for our hackathon-scale pools; replace with a
+// vector — O(n) in stakers, adequate for current pool sizes; swap for a
 // VecSet if profiling shows it matters).
 module tribunal::stake;
 
