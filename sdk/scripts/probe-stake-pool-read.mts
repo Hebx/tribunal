@@ -11,7 +11,8 @@ import { SuiJsonRpcClient, getJsonRpcFullnodeUrl } from "@mysten/sui/jsonRpc";
 const PKG = "0x2c8697803b3eec5b8e0e0391a4f1dacb0760a904ed67add840d94452b1cd3750";
 const POOL_CREATE_DIGEST = "GxKEKvk2WQ99GMNkKGtRq5Hjx4k5AEf5VAMZXQAGeogf";
 
-const client = new SuiJsonRpcClient({ url: getJsonRpcFullnodeUrl("testnet") });
+const NETWORK = "testnet" as const;
+const client = new SuiJsonRpcClient({ url: getJsonRpcFullnodeUrl(NETWORK), network: NETWORK });
 
 console.log("=== Task 0.1 probe ===");
 const tx = await client.getTransactionBlock({
