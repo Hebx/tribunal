@@ -48,3 +48,10 @@ export {
   type ParticipantStake,
   type AssertAndRecordArgs,
 } from "./agents/outcomes.js";
+
+// Typed verdict-bundle persistence on Walrus (v2 M4.3)
+export {
+  persistVerdictBundle,
+  type VerdictBundleLike,
+  type PersistedBundle,
+} from "./memory/verdict.js";
