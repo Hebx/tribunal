@@ -19,6 +19,12 @@ import {
 } from "./debate";
 import { runJury, juryModel, type JurorPersona, type JuryResult } from "./jury";
 import { guardrailRule, guardrailModel, type GuardrailDecision } from "./guardrail";
+import { GUARDRAIL_CONFIG_HASH } from "./guardrail-prompt";
+import { envVal } from "./gateway";
+import { buildProvenance, type Provenance } from "./provenance";
+import type { LoadedStake } from "./load-stakers";
+import type { AssembledCase } from "./assemble-case";
+import type { JuryPick } from "./select-jury";
 
 export interface ResolveAgents {
   affirmer: AdvocatePersona; // argues YES
@@ -28,6 +34,15 @@ export interface ResolveAgents {
 
 export interface ResolveOptions {
   rounds?: number; // debate rounds (default 2)
+  /** When provided, the verdict bundle carries a full provenance entry. */
+  provenance?: {
+    caseId: string;
+    loaded: LoadedStake;
+    assembled: AssembledCase;
+    jurySelection: JuryPick;
+    resolverCommit?: string;
+    gatewayBase?: string;
+  };
 }
 
 export interface VerdictBundle {
@@ -38,7 +53,11 @@ export interface VerdictBundle {
   finalOutcome: boolean; // binding verdict — follows the guardrail
   models: { advocate: string; jury: string; guardrail: string };
   configHashHex: string;
+  /** sha256 over the locked guardrail prompt — pinned alongside the model map. */
+  guardrailConfigHash: string;
   decidedAt: number;
+  /** Audit-trail row. Present when resolveCase was given a provenance bundle. */
+  provenance?: Provenance;
 }
 
 /**
@@ -53,6 +72,11 @@ export function resolverConfigHash(advocate: string, jury: string, guardrail: st
 /**
  * Resolve a case end-to-end. Throws if the jury config is invalid (delegated to
  * runJury). The binding `finalOutcome` is the guardrail's, not the jury's.
+ *
+ * When `opts.provenance` is supplied, the verdict bundle carries a fully
+ * populated Provenance entry (M3 audit trail). Without it, the bundle is the
+ * v2 shape minus the audit row — a tolerant path so legacy callers (tests,
+ * verify-resolve.mts) keep working.
  */
 export async function resolveCase(
   c: CaseInput,
@@ -71,14 +95,40 @@ export async function resolveCase(
   const guardrail = await guardrailRule(c, debate, jury);
 
   const models = { advocate: advocateModel(), jury: juryModel(), guardrail: guardrailModel() };
-  return {
+  const decidedAt = Date.now();
+  const resolverHash = resolverConfigHash(models.advocate, models.jury, models.guardrail);
+
+  const bundle: VerdictBundle = {
     case: c,
     debate,
     jury,
     guardrail,
     finalOutcome: guardrail.finalOutcome,
     models,
-    configHashHex: resolverConfigHash(models.advocate, models.jury, models.guardrail),
-    decidedAt: Date.now(),
+    configHashHex: resolverHash,
+    guardrailConfigHash: GUARDRAIL_CONFIG_HASH,
+    decidedAt,
   };
+
+  if (opts.provenance) {
+    const p = opts.provenance;
+    bundle.provenance = buildProvenance({
+      caseId: p.caseId,
+      loaded: p.loaded,
+      assembled: p.assembled,
+      jurySelection: p.jurySelection,
+      models,
+      configHashes: { resolver: resolverHash, guardrail: GUARDRAIL_CONFIG_HASH },
+      gateway: {
+        base: p.gatewayBase ?? envVal("KIRO_GATEWAY_BASE") ?? "",
+        // Temperatures here are the call-site defaults; buildProvenance fills
+        // its own defaults if any are missing, so omitting them is safe.
+        temperatures: {},
+      },
+      decidedAt,
+      resolverCommit: p.resolverCommit,
+    });
+  }
+
+  return bundle;
 }
