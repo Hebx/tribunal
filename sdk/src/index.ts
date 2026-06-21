@@ -49,6 +49,16 @@ export {
   type AssertAndRecordArgs,
 } from "./agents/outcomes.js";
 
+// Stake (v2 M5) — opt-in skin-in-the-game pools, claim-on-settlement
+export {
+  buildCreatePool,
+  buildStake,
+  buildClaim,
+  type CreatePoolArgs,
+  type StakeArgs,
+  type ClaimArgs,
+} from "./agents/stake.js";
+
 // Typed verdict-bundle persistence on Walrus (v2 M4.3)
 export {
   persistVerdictBundle,

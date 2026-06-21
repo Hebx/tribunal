@@ -32,16 +32,29 @@ Reproduce: `cd sdk && npm install && TRIBUNAL_NETWORK=testnet npm run deploy && 
 
 ### v2 — persona-debate package (testnet)
 
-- **Package ID:** `0x2076d59aad67a1c8305d750ce9c0853238b094655ac179b9435402c73d872d1c`
-- **CaseCreatorCap:** `0xf5043e63d909aba053c1418f6cd85b4e36a6bb05031039191397275504d479b1`
-- **ReputationCap:** `0x89ec20f484192962fcc264ba13c83f4aa98e5bbbe6af21aa400a1d721e1df859`
-- **Publish digest:** `HJhwTiZCqHDpUPqBWUN8bV9iQk8J4dWc6CsBEh8omoLW`
+- **Package ID:** `0x2c8697803b3eec5b8e0e0391a4f1dacb0760a904ed67add840d94452b1cd3750`
+- **CaseCreatorCap:** `0x56bc017bbac4b09e096bab13f59ae1c0a0fa899a1777d6dec919bfd39a560283`
+- **ReputationCap:** `0x50535871e26ecec2d33e589909729493179bcc7727712c996fb9041f486999a7`
+- **Publish digest:** `BvtYpFAZ9EyDSLVMJatwuYYHhPyZ7cLf8J8TvkuPAhGB`
 
-Bundled assert+record verified on testnet (one PTB, atomic):
+Bundled assert+record verified (one PTB, atomic):
 - `register_agent` (affirmer, Pragmatist) `7D7hXwxNTNFqUborRsr8q5RHjkF3XfJ7SXSo5gAT9cnT`
 - `register_agent` (denier, Textualist) `3GVhmupbfVp1D13Ka1NKNRCZ7r2KjXzxTWBGvz89G1r5`
 - `create_case` `ELXwt4PXFR5bL8UBXX4NNg847TLuvAvfEmKWyM8TeXUi`
 - `assert_resolution + 2x record_outcome` (bundled) `GAwUV7WES78RJYBYmyLUvsScffJPRymUepP1LRPEUsW3`
 - final state: case asserted YES, affirmer score `100 → 120`, denier score `100 → 85` ✓
 
-Reproduce: `cd sdk && node --import tsx scripts/verify-outcomes.mts`
+Reproduce assert+record: `cd sdk && node --import tsx scripts/verify-outcomes.mts`
+
+#### Stake module — full lifecycle verified
+
+- `stake::create_pool` `GxKEKvk2WQ99GMNkKGtRq5Hjx4k5AEf5VAMZXQAGeogf`
+- `stake YES 0.01 SUI` `G7Y2g4euMjCnRcxc7q78gEXs9LZRuEitn6XsQtLG5SAD`
+- `stake NO 0.005 SUI` `FZinXaTTNA8ZUNtkb2eg93q2kan6aSA2sqswu3JKkZMT`
+- `assert + 2x record_outcome` `HznRxvKEfmBEuvVhv9oZdCs4g1Ykm5T4a6Dg96ypqiyu`
+- `settle` `H18j86jUHnehQxECAcv4jWR2AsUdRg8pyRsDYh7qR6gd`
+- `claim_winnings (YES wins, gets principal + losing pool)` `Af4CqPb92LZB5KmdtTgRy7N9xgRyrRbjtT6Qn5oJjGV1`
+- `claim_winnings (NO loser, receipt consumed, zero payout)` `7RFTeiajcEZzbNjQTQkgm9pgrWmn2MhRyD6JoD5c1U6g`
+- final state: pool balances drained to 0; winner received `0.01 + 0.005 = 0.015 SUI` ✓
+
+Reproduce stake flow: `cd sdk && node --import tsx scripts/verify-stake.mts`
