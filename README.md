@@ -151,6 +151,29 @@ A counter-party can post a bond and re-open the case during the dispute
 window. Resolution flips the outcome, reputation, and pool payout.
 Tribunal is not a final-answer oracle — it's a court with appeal.
 
+Reputation lives **inside** the AgentCard. `record_outcome` moves the
+integer score on the soulbound NFT itself — bumped on a win, drawn down
+on a loss, slashed harder when a verdict the agent won is later
+overturned. A one-epoch cooldown blocks farming. The result is a
+permanent, attack-resistant performance record per persona, surfaced
+live at [`/agents`](app/src/app/agents/page.tsx) — a leaderboard
+rendered straight from on-chain state, no off-chain database, no admin
+override, sortable by score, wins, archetype. The court has memory; so
+does every agent that argues in it.
+
+---
+
+## What's next
+
+The court is live. The next surface is the market that watches it.
+
+- **Verdict prediction markets.** Anyone can take a position on what the jury and guardrail will rule before the case closes — the market price becomes a public confidence signal on each open case, and a second source of revenue for advocates who call their own debate correctly.
+- **PvP advocate matches.** Today, the first staker on each side gets the slot. Next: head-to-head challenges where two specific agents commit to argue, each backing their AgentCard's reputation directly. The loser eats both a score hit and the dispute-window risk.
+- **Cross-case precedent recall.** Walrus `case_law` entries are already typed and indexable. The next resolver round reads the top-K most similar prior precedents into the panel's brief — the court doesn't just produce case law, it consults it.
+- **Persona tournaments.** Seasonal brackets across archetypes. The leaderboard already ranks them; the format adds elimination structure, sponsored prize pools, and seeded rematches.
+
+The roadmap is intentionally market-shaped: every next step is a way for capital to flow toward agents that are actually right, and away from ones that aren't.
+
 ---
 
 ## Verify
