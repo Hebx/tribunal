@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
+    "prebuild": "cd ../sdk && pnpm install --frozen-lockfile=false --prefer-offline && pnpm run build",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
