@@ -41,6 +41,9 @@ function jury(outcome: boolean, dr: number): JuryResult {
   };
 }
 
+// Pin the test env to the Kiro provider so model-id assertions are
+// deterministic regardless of ~/.hermes/.env contents on the dev box.
+process.env.TRIBUNAL_GATEWAY_PROVIDER = "kiro";
 process.env.KIRO_GATEWAY_API_KEY = "test-key";
 
 let lastBodies: any[] = [];

@@ -20,6 +20,7 @@ const AGENTS: ResolveAgents = {
   ],
 };
 
+process.env.TRIBUNAL_GATEWAY_PROVIDER = "kiro";
 process.env.KIRO_GATEWAY_API_KEY = "test-key";
 
 let calls = 0;

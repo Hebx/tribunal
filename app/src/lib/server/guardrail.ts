@@ -11,7 +11,7 @@
 // without one (contradicts itself), we backfill a reason rather than emit a
 // silent, unaccountable flip — accountability is the whole point of this layer.
 
-import { chat, envVal, extractJson, type ChatMessage } from "./gateway";
+import { chat, envVal, extractJson, gatewayProvider, type ChatMessage } from "./gateway";
 import { anonymizeTranscript } from "./jury";
 import {
   GUARDRAIL_SYSTEM_PROMPT,
@@ -39,7 +39,13 @@ export interface GuardrailDecision {
 }
 
 export function guardrailModel(): string {
-  return envVal("TRIBUNAL_GUARDRAIL_MODEL") ?? "claude-opus-4.8";
+  const explicit = envVal("TRIBUNAL_GUARDRAIL_MODEL");
+  if (explicit) return explicit;
+  // Provider-aware default. OpenRouter uses fully-qualified slugs; the
+  // high-tier judge slot goes to GLM-5.2 (frontier reasoning, 1M context).
+  return gatewayProvider() === "openrouter"
+    ? "z-ai/glm-5.2"
+    : "claude-opus-4.8";
 }
 
 /** Re-export the prompt hash so the resolver provenance entry can pin it. */

@@ -40,6 +40,7 @@ const JUROR_A: JurorPersona = { handle: "Juror-Textualist", systemPrompt: "You a
 const JUROR_B: JurorPersona = { handle: "Juror-Pragmatist", systemPrompt: "You are Pragmatist. You judge by outcomes." };
 const JUROR_C: JurorPersona = { handle: "Juror-Ethicist", systemPrompt: "You are Ethicist. Fairness and good faith govern." };
 
+process.env.TRIBUNAL_GATEWAY_PROVIDER = "kiro";
 process.env.KIRO_GATEWAY_API_KEY = "test-key";
 
 let lastBodies: any[] = [];

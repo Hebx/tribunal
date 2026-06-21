@@ -9,7 +9,7 @@
 // The transcript feeds the jury (M3); advocate identities are anonymized to
 // the jury downstream to resist anchoring.
 
-import { chat, envVal, extractJson, type ChatMessage } from "./gateway";
+import { chat, envVal, extractJson, gatewayProvider, type ChatMessage } from "./gateway";
 
 export type Side = "yes" | "no";
 
@@ -45,7 +45,12 @@ export interface DebateResult {
 }
 
 export function advocateModel(): string {
-  return envVal("TRIBUNAL_ADVOCATE_MODEL") ?? "claude-haiku-4.5";
+  const explicit = envVal("TRIBUNAL_ADVOCATE_MODEL");
+  if (explicit) return explicit;
+  // Provider-aware default. OpenRouter uses fully-qualified slugs.
+  return gatewayProvider() === "openrouter"
+    ? "deepseek/deepseek-v4-flash"
+    : "claude-haiku-4.5";
 }
 
 const SIDE_GOAL: Record<Side, string> = {
