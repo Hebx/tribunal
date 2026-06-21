@@ -284,9 +284,12 @@ fun test_loser_receipt_consumed_no_payout() {
 
 #[test]
 fun test_proportional_payout_two_winners() {
-    // Winners: ALICE 600, CAROL 200 (total 800 on YES). Loser: BOB 400 on NO.
-    // YES wins. Alice's share of NO = 600/800 * 400 = 300; Carol's = 100.
-    // Alice gets 600 + 300 = 900; Carol gets 200 + 100 = 300.
+    // v3 weighted math: ALICE is the YES advocate (3× weight), CAROL is a YES
+    // backer (1× weight). BOB is the NO advocate (irrelevant — loses).
+    // yes_weighted_total = 600*3 + 200*1 = 2000. Losing total (NO) = 400.
+    // Alice share = 1800 * 400 / 2000 = 360 → payout = 600 + 360 = 960.
+    // Carol share =  200 * 400 / 2000 =  40 → payout = 200 +  40 = 240.
+    // Sum of shares = 400 = losing_total ✓ (no rounding crumbs).
     let mut scen = ts::begin(CREATOR);
     create_case(&mut scen);
     register_agent(&mut scen, ALICE, b"pragmatist");
@@ -298,7 +301,7 @@ fun test_proportional_payout_two_winners() {
     do_stake(&mut scen, CAROL, true, 200);
     assert_and_settle(&mut scen, true);
 
-    // Alice claims
+    // Alice claims (advocate)
     ts::next_tx(&mut scen, ALICE);
     {
         let mut pool = ts::take_shared<StakePool<SUI>>(&scen);
@@ -311,10 +314,10 @@ fun test_proportional_payout_two_winners() {
     ts::next_tx(&mut scen, ALICE);
     {
         let payout = ts::take_from_sender<coin::Coin<SUI>>(&scen);
-        assert!(coin::value(&payout) == 900, 0);
+        assert!(coin::value(&payout) == 960, 0);
         ts::return_to_sender(&scen, payout);
     };
-    // Carol claims — she should get exactly her share of what is left
+    // Carol claims (backer)
     ts::next_tx(&mut scen, CAROL);
     {
         let mut pool = ts::take_shared<StakePool<SUI>>(&scen);
@@ -327,7 +330,7 @@ fun test_proportional_payout_two_winners() {
     ts::next_tx(&mut scen, CAROL);
     {
         let payout = ts::take_from_sender<coin::Coin<SUI>>(&scen);
-        assert!(coin::value(&payout) == 300, 1);
+        assert!(coin::value(&payout) == 240, 1);
         ts::return_to_sender(&scen, payout);
     };
     ts::end(scen);
@@ -350,6 +353,132 @@ fun test_claim_before_settle_aborts() {
         stake::claim_winnings<SUI>(&mut pool, &case, receipt, ts::ctx(&mut scen));
         ts::return_shared(case);
         ts::return_shared(pool);
+    };
+    ts::end(scen);
+}
+
+// === v3: first-staker advocate + weighted claim split ===
+
+#[test]
+fun test_first_yes_staker_becomes_advocate() {
+    let mut scen = ts::begin(CREATOR);
+    create_case(&mut scen);
+    register_agent(&mut scen, ALICE, b"pragmatist");
+    register_agent(&mut scen, CAROL, b"intent-first");
+    create_pool(&mut scen);
+    // Alice stakes YES first → advocate. Carol second → backer.
+    do_stake(&mut scen, ALICE, true, 100);
+    do_stake(&mut scen, CAROL, true, 100);
+    ts::next_tx(&mut scen, ALICE);
+    {
+        let pool = ts::take_shared<StakePool<SUI>>(&scen);
+        let opt = stake::advocate_yes_id<SUI>(&pool);
+        assert!(option::is_some(&opt), 0);
+        ts::return_shared(pool);
+    };
+    ts::end(scen);
+}
+
+#[test]
+fun test_second_yes_staker_is_backer() {
+    let mut scen = ts::begin(CREATOR);
+    create_case(&mut scen);
+    register_agent(&mut scen, ALICE, b"pragmatist");
+    register_agent(&mut scen, CAROL, b"intent-first");
+    create_pool(&mut scen);
+    do_stake(&mut scen, ALICE, true, 100);  // advocate
+    do_stake(&mut scen, CAROL, true, 100);  // backer
+    // Alice's receipt is the advocate one, Carol's is the backer one.
+    ts::next_tx(&mut scen, ALICE);
+    {
+        let r = ts::take_from_sender<StakeReceipt<SUI>>(&scen);
+        assert!(stake::receipt_is_advocate<SUI>(&r) == true, 0);
+        assert!(stake::receipt_weight<SUI>(&r) == 300, 1); // 100 * 3
+        ts::return_to_sender(&scen, r);
+    };
+    ts::next_tx(&mut scen, CAROL);
+    {
+        let r = ts::take_from_sender<StakeReceipt<SUI>>(&scen);
+        assert!(stake::receipt_is_advocate<SUI>(&r) == false, 2);
+        assert!(stake::receipt_weight<SUI>(&r) == 100, 3); // 100 * 1
+        ts::return_to_sender(&scen, r);
+    };
+    ts::end(scen);
+}
+
+#[test]
+fun test_advocate_weight_is_triple_backer() {
+    let mut scen = ts::begin(CREATOR);
+    create_case(&mut scen);
+    register_agent(&mut scen, ALICE, b"pragmatist");
+    register_agent(&mut scen, CAROL, b"intent-first");
+    create_pool(&mut scen);
+    do_stake(&mut scen, ALICE, true, 100);
+    do_stake(&mut scen, CAROL, true, 100);
+    ts::next_tx(&mut scen, CREATOR);
+    {
+        let pool = ts::take_shared<StakePool<SUI>>(&scen);
+        // yes_weighted_total = 300 (advocate) + 100 (backer) = 400
+        assert!(stake::yes_weighted_total<SUI>(&pool) == 400, 0);
+        // yes_total still tracks raw amounts: 100 + 100 = 200
+        assert!(stake::yes_total<SUI>(&pool) == 200, 1);
+        ts::return_shared(pool);
+    };
+    ts::end(scen);
+}
+
+#[test]
+fun test_advocate_share_is_triple_backer_when_stakes_equal() {
+    // YES side: ALICE advocate 100 (weight 300), CAROL backer 100 (weight 100).
+    // NO side: BOB advocate 100 (weight 300). YES wins, losing_total = 100.
+    // Alice share = 300 * 100 / 400 = 75
+    // Carol share = 100 * 100 / 400 = 25
+    // Sum = 100 = losing_total (exact, no rounding crumbs at these numbers).
+    // Alice payout = 100 (principal) + 75 (share) = 175
+    // Carol payout = 100 (principal) + 25 (share) = 125
+    // 75 == 3 * 25  ✓
+    let mut scen = ts::begin(CREATOR);
+    create_case(&mut scen);
+    register_agent(&mut scen, ALICE, b"pragmatist");
+    register_agent(&mut scen, BOB, b"textualist");
+    register_agent(&mut scen, CAROL, b"intent-first");
+    create_pool(&mut scen);
+    do_stake(&mut scen, ALICE, true, 100);   // YES advocate
+    do_stake(&mut scen, BOB,   false, 100);  // NO advocate
+    do_stake(&mut scen, CAROL, true, 100);   // YES backer
+    assert_and_settle(&mut scen, true);
+
+    // Alice claims (advocate)
+    ts::next_tx(&mut scen, ALICE);
+    {
+        let mut pool = ts::take_shared<StakePool<SUI>>(&scen);
+        let case = ts::take_shared<Case<SUI>>(&scen);
+        let receipt = ts::take_from_sender<StakeReceipt<SUI>>(&scen);
+        stake::claim_winnings<SUI>(&mut pool, &case, receipt, ts::ctx(&mut scen));
+        ts::return_shared(case);
+        ts::return_shared(pool);
+    };
+    ts::next_tx(&mut scen, ALICE);
+    {
+        let payout = ts::take_from_sender<coin::Coin<SUI>>(&scen);
+        assert!(coin::value(&payout) == 175, 0);
+        ts::return_to_sender(&scen, payout);
+    };
+    // Carol claims (backer)
+    ts::next_tx(&mut scen, CAROL);
+    {
+        let mut pool = ts::take_shared<StakePool<SUI>>(&scen);
+        let case = ts::take_shared<Case<SUI>>(&scen);
+        let receipt = ts::take_from_sender<StakeReceipt<SUI>>(&scen);
+        stake::claim_winnings<SUI>(&mut pool, &case, receipt, ts::ctx(&mut scen));
+        ts::return_shared(case);
+        ts::return_shared(pool);
+    };
+    ts::next_tx(&mut scen, CAROL);
+    {
+        let payout = ts::take_from_sender<coin::Coin<SUI>>(&scen);
+        assert!(coin::value(&payout) == 125, 1);
+        ts::return_to_sender(&scen, payout);
     };
     ts::end(scen);
 }
