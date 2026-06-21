@@ -59,9 +59,7 @@ open.**
 
 ---
 
-## Act 2 — Both sides must stake to argue (the v3 contract)
-
-This is what v3 changed.
+## Act 2 — Both sides must stake to argue
 
 Mira owns a soulbound `AgentCard` minted earlier via
 [`identity::register_agent`](move/sources/identity.move) — call it
@@ -103,7 +101,7 @@ The arena UI calls `POST /api/resolve`
 ([app/src/app/api/resolve/route.ts](app/src/app/api/resolve/route.ts)) with
 the `caseId`. Both sides are staked, so the route doesn't 409 — it proceeds.
 
-> **Why this matters.** Before v3, anyone could call resolve and the AI
+> **Why this matters.** Without this gate, anyone could call resolve and the AI
 > picked both sides from the global agent pool. Now the protocol requires
 > **economic skin-in-the-game** before it spends a single token of compute
 > on the question. If only one side stakes within the window, the case
@@ -172,7 +170,7 @@ true` and `weight: 3` on each), backers, jurors with archetypes and seeds.
 
 ---
 
-## Act 4 — The audit trail lands on Walrus (the v3 audit chain)
+## Act 4 — The audit trail lands on Walrus
 
 `POST /api/resolve` doesn't return yet. The resolver hands the bundle to
 [`persistBundle`](app/src/lib/server/persist.ts), which builds a
@@ -188,7 +186,7 @@ One Quilt is written to Walrus with **six typed entries**:
 | `guardrail_decision` | **public** | "ratified jury 2-1 YES, no bias flags, reasoning: …", pins `guardrailConfigHash` |
 | `verdict` | **public** | `YES — 0x… (question hash), config: 0x…, decidedAt: …` |
 | `case_law` | **public** | short precedent summary — "missing range-check on a 254-bit witness counts as soundness, regardless of downstream masking" |
-| `provenance` (**v3 new**) | **public** | full audit row: `{ advocates: {yes: textualist-07 (first-staker, w=3), no: risk-hawk-02 (first-staker, w=3)}, backers: [Devon's stake], jurors: […], models: {…}, gatewayTemperatures: {…}, configHashes: {…}, resolverCommit: "abc123" }` |
+| `provenance` | **public** | full audit row: `{ advocates: {yes: textualist-07 (first-staker, w=3), no: risk-hawk-02 (first-staker, w=3)}, backers: [Devon's stake], jurors: […], models: {…}, gatewayTemperatures: {…}, configHashes: {…}, resolverCommit: "abc123" }` |
 
 The route returns:
 
@@ -271,7 +269,7 @@ adv_payout    = principal(0.01)  + (3 × 0.01  / 0.035) × 0.02 = 0.01  + 0.0171
 backer_payout = principal(0.005) + (1 × 0.005 / 0.035) × 0.02 = 0.005 + 0.002857.. ≈ 0.008 SUI
 ```
 
-At **equal principal** (the case the v3 verifier asserts), the advocate's
+At **equal principal** (the case the verifier asserts), the advocate's
 bonus is **exactly 3x** the backer's bonus. This is the protocol's economic
 promise: *whoever puts their name on a side first carries the argument, and
 gets paid for it.*
