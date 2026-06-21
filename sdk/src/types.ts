@@ -22,6 +22,8 @@ export interface TribunalDeployment {
   packageId: string;
   /** CaseCreatorCap object id minted to the publisher by `init`. */
   creatorCapId: string;
+  /** ReputationCap object id minted to the publisher by identity::init (v2). */
+  reputationCapId?: string;
   publishedAt: string;
   digest: string;
 }
