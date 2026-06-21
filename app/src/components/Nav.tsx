@@ -9,7 +9,7 @@ import { NETWORK } from "@/lib/chain";
 const LINKS = [
   { href: "/", label: "Arena" },
   { href: "/precedent", label: "Case Law" },
-  { href: "/agents/new", label: "Agents" },
+  { href: "/agents", label: "Agents" },
   { href: "/summon", label: "Summon" },
 ];
 
