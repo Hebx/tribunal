@@ -8,11 +8,13 @@ on:
     branches: [main]
     paths:
       - 'app/**'
+      - 'sdk/**'
       - '.github/workflows/app-ci.yml'
   push:
     branches: [main]
     paths:
       - 'app/**'
+      - 'sdk/**'
       - '.github/workflows/app-ci.yml'
 
 jobs:
@@ -34,6 +36,17 @@ jobs:
           node-version: '22'
           cache: 'pnpm'
           cache-dependency-path: app/pnpm-lock.yaml
+
+      # SDK is consumed by the app as a path-aliased import to its dist build
+      # (see app/tsconfig.json paths). The dist folder is gitignored so CI must
+      # rebuild it before the app's typecheck/build can resolve the alias.
+      - name: Install SDK deps
+        working-directory: sdk
+        run: npm install --no-audit --no-fund
+
+      - name: Build SDK
+        working-directory: sdk
+        run: npm run build
 
       - name: Install deps
         working-directory: app

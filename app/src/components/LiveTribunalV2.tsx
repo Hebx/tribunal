@@ -18,6 +18,7 @@
 
 import { useState } from "react";
 import type { Battle } from "@/lib/types";
+import { AuditTrail, type AuditProvenance } from "@/components/AuditTrail";
 
 interface DebateArgument {
   side: "yes" | "no";
@@ -61,7 +62,22 @@ interface VerdictBundle {
   configHashHex: string;
   guardrailConfigHash: string;
   decidedAt: number;
+  provenance?: AuditProvenance;
 }
+
+/** Payload from /api/resolve when persistence succeeded. */
+interface AuditOk {
+  ok: true;
+  quiltId: string;
+  patches: Record<string, string>;
+  aggregator: string;
+  namespace: string;
+}
+interface AuditErr {
+  ok: false;
+  error: string;
+}
+type AuditPayload = AuditOk | AuditErr;
 
 /** Scroll the stake panel into view; called when the gated 409 lands. */
 function scrollToStakePanel() {
@@ -87,6 +103,7 @@ function VoteBadge({ vote }: { vote: boolean | null }) {
 
 export function LiveTribunalV2({ battle }: { battle: Battle }) {
   const [bundle, setBundle] = useState<VerdictBundle | null>(null);
+  const [audit, setAudit] = useState<AuditPayload | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [gated, setGated] = useState<{ emptySides: ("yes" | "no")[] } | null>(null);
@@ -100,6 +117,7 @@ export function LiveTribunalV2({ battle }: { battle: Battle }) {
     setLoading(true);
     setError(null);
     setBundle(null);
+    setAudit(null);
     setGated(null);
     setPhase("debate");
     try {
@@ -115,6 +133,7 @@ export function LiveTribunalV2({ battle }: { battle: Battle }) {
       }
       if (!res.ok) throw new Error(data?.error ?? `resolve failed (HTTP ${res.status})`);
       setBundle(data.bundle);
+      if (data.audit) setAudit(data.audit as AuditPayload);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -313,6 +332,26 @@ export function LiveTribunalV2({ battle }: { battle: Battle }) {
             </div>
             <div>guardrail prompt hash · {bundle.guardrailConfigHash.slice(0, 16)}…</div>
           </div>
+
+          {/* Audit trail — Walrus typed Quilt + provenance row */}
+          {audit?.ok && (
+            <AuditTrail
+              quiltId={audit.quiltId}
+              patches={audit.patches}
+              aggregator={audit.aggregator}
+              settled={battle.status === "settled"}
+              provenance={bundle.provenance}
+            />
+          )}
+          {audit?.ok === false && (
+            <AuditTrail
+              quiltId=""
+              patches={{}}
+              aggregator=""
+              settled={false}
+              error={audit.error}
+            />
+          )}
         </div>
       )}
     </section>
