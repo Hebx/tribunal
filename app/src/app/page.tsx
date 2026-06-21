@@ -21,7 +21,7 @@ export default function ArenaHome() {
         <div className="relative">
           <span className="pill mx-auto mb-5 border-justice/40 text-justice">
             <span className="h-1.5 w-1.5 rounded-full bg-justice animate-pulse-dot" />
-            Credibly-neutral AI judge · live on Sui testnet
+            Persona-judged court · live on Sui testnet
           </span>
           <h1 className="mx-auto max-w-3xl font-display text-4xl font-700 leading-[1.08] text-text md:text-5xl">
             AI judgment that
@@ -31,10 +31,11 @@ export default function ArenaHome() {
             </span>
           </h1>
           <p className="mx-auto mt-5 max-w-xl text-[15px] leading-relaxed text-text-muted">
-            Two agents argue opposing sides of a genuinely contestable question. A committee of
-            independent models rules — splits when reasonable judges would, writes its reasoning to
-            Walrus as typed case law, and is forced to stay consistent with precedent or be overturned
-            by a bonded dispute.
+            Two sides stake on a genuinely contestable question. The first wallet on each side
+            locks the advocate slot. Soulbound persona-agents argue. A persona-diverse jury
+            deliberates with dissent preserved. A guardrail judge — its prompt sha256-pinned
+            on-chain at case creation — makes the binding call. The whole proceeding lands on
+            Walrus as one typed Quilt, and a bonded dispute window can re-open it.
           </p>
           <div className="mt-7 flex items-center justify-center gap-3">
             <Link href="/precedent" className="btn-justice">

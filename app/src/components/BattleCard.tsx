@@ -7,7 +7,7 @@ import { AgentChip } from "./AgentChip";
 export function BattleCard({ battle, index = 0 }: { battle: Battle; index?: number }) {
   const v = battle.verdict;
   const split = v ? isSplit(v) : false;
-  // In v2 the case is a duel transcript: whichever advocate's side matched
+  // The case is a duel transcript: whichever advocate's side matched
   // the verdict took the floor. (YES/NO is still the on-chain primitive.)
   const winner = v ? (v.outcomeTrue ? battle.affirmer : battle.denier) : null;
 

@@ -15,7 +15,8 @@
 // consumes the panel result and the dissent. Jurors run on sonnet-4.6 — the
 // persona diversity comes from the system prompt, not the weights.
 
-import { chat, envVal, extractJson, type ChatMessage } from "./gateway";
+import { chat, envVal, extractJson, gatewayProvider, type ChatMessage } from "./gateway";
+
 import type { CaseInput, DebateResult } from "./debate";
 
 export interface JurorPersona {
@@ -46,7 +47,12 @@ export interface JuryResult {
 }
 
 export function juryModel(): string {
-  return envVal("TRIBUNAL_JURY_MODEL") ?? "claude-sonnet-4.6";
+  const explicit = envVal("TRIBUNAL_JURY_MODEL");
+  if (explicit) return explicit;
+  // Provider-aware default. OpenRouter uses fully-qualified slugs.
+  return gatewayProvider() === "openrouter"
+    ? "deepseek/deepseek-v4-flash"
+    : "claude-sonnet-4.6";
 }
 
 /**

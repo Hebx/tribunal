@@ -13,6 +13,7 @@ const AFFIRMER: AdvocatePersona = { handle: "Advocate-Y", systemPrompt: "You are
 const DENIER: AdvocatePersona = { handle: "Advocate-N", systemPrompt: "You are Textualist. The words on the page control." };
 
 // Ensure the gateway key exists so chat() doesn't throw before fetch.
+process.env.TRIBUNAL_GATEWAY_PROVIDER = "kiro";
 process.env.KIRO_GATEWAY_API_KEY = "test-key";
 
 // Capture the messages sent to the gateway so we can assert on prompts.

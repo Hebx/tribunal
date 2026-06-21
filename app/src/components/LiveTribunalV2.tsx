@@ -146,7 +146,7 @@ export function LiveTribunalV2({ battle }: { battle: Battle }) {
     <section>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="font-display text-xl font-600 text-text">The Bench (v2)</h2>
+          <h2 className="font-display text-xl font-600 text-text">The Bench</h2>
           <p className="font-mono text-[11px] text-text-faint">
             advocates argue · jury deliberates · guardrail rules
           </p>
