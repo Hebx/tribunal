@@ -33,6 +33,16 @@ const EZeroStake: u64 = 4;        // stake amount must be > 0
 const EAlreadyClaimed: u64 = 5;   // a receipt is single-use; double-claim blocked
 const ECaseMismatch: u64 = 6;     // claim called against the wrong Case object
 
+// === Boost weights ===
+// Advocate (first staker on a side) gets a 3.00× share weight; backer is 1.00×.
+// Both expressed in basis points against BPS_DEN = 10_000.
+// Principal-back math is unchanged — only the losing-pool *share* uses weights.
+// The seam that prediction-market betting will later slot into (`bet()` writes
+// a record with is_advocate=false / boost=BACKER_BPS, claim math is identical).
+const ADVOCATE_BOOST_BPS: u64 = 30_000;
+const BACKER_BPS:        u64 = 10_000;
+const BPS_DEN:           u64 = 10_000;
+
 // === Shared pool, one per case ===
 public struct StakePool<phantom T> has key {
     id: UID,
@@ -47,6 +57,28 @@ public struct StakePool<phantom T> has key {
     no_total: u64,
     /// AgentCard ids that have already staked, to prevent double-staking.
     staked_agents: vector<ID>,
+    /// First wallet to stake YES becomes the YES advocate, immutable.
+    /// None until the first YES stake.
+    advocate_yes: Option<ID>,
+    /// First wallet to stake NO becomes the NO advocate, immutable.
+    advocate_no: Option<ID>,
+    /// Sum of claim-weights on each side (= advocate.amount × 3 + Σ backers.amount).
+    /// Used as the denominator in claim_winnings. Order-independent.
+    yes_weighted_total: u64,
+    no_weighted_total: u64,
+    /// Parallel record of every stake call, for off-chain matchmaking.
+    stakes: vector<StakeRecord>,
+}
+
+/// On-chain row pushed for every successful stake() call. The resolver can
+/// list these in one RPC + identify the advocate via is_advocate without
+/// walking the event log.
+public struct StakeRecord has store, drop, copy {
+    agent_id: ID,
+    side_true: bool,
+    amount: u64,
+    weight: u64,
+    is_advocate: bool,
 }
 
 /// Non-transferable claim ticket. `key`-only (no store) keeps it stuck in the
@@ -61,6 +93,10 @@ public struct StakeReceipt<phantom T> has key {
     amount: u64,
     /// The case this receipt is for — used as a defensive check on claim.
     case_id: ID,
+    /// Claim weight (= amount for backers, amount × 3 for advocate).
+    weight: u64,
+    /// True iff this receipt belongs to the side's advocate.
+    is_advocate: bool,
 }
 
 // === Events ===
@@ -104,6 +140,11 @@ public fun create_pool<T>(case: &Case<T>, ctx: &mut TxContext): ID {
         no_balance: balance::zero<T>(),
         no_total: 0,
         staked_agents: vector[],
+        advocate_yes: option::none(),
+        advocate_no: option::none(),
+        yes_weighted_total: 0,
+        no_weighted_total: 0,
+        stakes: vector[],
     };
     let pool_id = object::id(&pool);
     event::emit(PoolCreated { pool_id, case_id: object::id(case) });
@@ -131,16 +172,37 @@ public fun stake<T>(
     let amount = coin::value(&payment);
     assert!(amount > 0, EZeroStake);
 
+    // Determine advocate-ness: the first staker on each side claims that slot
+    // and it is immutable thereafter. Everyone else is a backer.
+    let is_advocate = if (side_true) {
+        if (pool.advocate_yes.is_none()) {
+            pool.advocate_yes = option::some(agent_id);
+            true
+        } else { false }
+    } else {
+        if (pool.advocate_no.is_none()) {
+            pool.advocate_no = option::some(agent_id);
+            true
+        } else { false }
+    };
+    let boost_bps = if (is_advocate) ADVOCATE_BOOST_BPS else BACKER_BPS;
+    let weight = (((amount as u128) * (boost_bps as u128)) / (BPS_DEN as u128)) as u64;
+
     let bal = coin::into_balance(payment);
     if (side_true) {
         pool.yes_balance.join(bal);
         pool.yes_total = pool.yes_total + amount;
+        pool.yes_weighted_total = pool.yes_weighted_total + weight;
     } else {
         pool.no_balance.join(bal);
         pool.no_total = pool.no_total + amount;
+        pool.no_weighted_total = pool.no_weighted_total + weight;
     };
 
     pool.staked_agents.push_back(agent_id);
+    pool.stakes.push_back(StakeRecord {
+        agent_id, side_true, amount, weight, is_advocate,
+    });
 
     let receipt = StakeReceipt<T> {
         id: object::new(ctx),
@@ -149,6 +211,8 @@ public fun stake<T>(
         side_true,
         amount,
         case_id: pool.case_id,
+        weight,
+        is_advocate,
     };
     event::emit(Staked {
         pool_id: object::id(pool),
@@ -189,6 +253,8 @@ public fun claim_winnings<T>(
         side_true,
         amount,
         case_id,
+        weight,
+        is_advocate: _,
     } = receipt;
     let staker = ctx.sender();
 
@@ -209,24 +275,21 @@ public fun claim_winnings<T>(
         };
         payout.join(principal);
 
-        // Compute proportional share from HISTORICAL totals. This is order-
-        // independent: share_i = amount_i * losing_total / winning_total, and
-        // the sum across all winners is exactly losing_total (modulo integer
-        // rounding crumbs, which stay in the pool — see below).
-        let (winning_total, losing_total) = if (side_true) {
-            (pool.yes_total, pool.no_total)
+        // Weighted share of the losing pool. Single denominator
+        // (winning_weighted_total) is shared across every winner, so partial
+        // claims stay coherent regardless of order. Rounding crumbs stay in
+        // the pool's balance.
+        let (winning_weighted_total, losing_total) = if (side_true) {
+            (pool.yes_weighted_total, pool.no_total)
         } else {
-            (pool.no_total, pool.yes_total)
+            (pool.no_weighted_total, pool.yes_total)
         };
-        // share = amount * losing_total / winning_total. The same denominator
-        // is used by every winner, so shares stay coherent regardless of
-        // claim order.
-        let share = if (winning_total == 0) {
+        let share = if (winning_weighted_total == 0) {
             0
         } else {
             // u128 multiplication to avoid overflow on large pools
-            let num = (amount as u128) * (losing_total as u128);
-            ((num / (winning_total as u128)) as u64)
+            let num = (weight as u128) * (losing_total as u128);
+            ((num / (winning_weighted_total as u128)) as u64)
         };
         winnings_amount = share;
         if (share > 0) {
@@ -264,11 +327,25 @@ public fun no_total<T>(pool: &StakePool<T>): u64 { pool.no_total }
 public fun yes_balance_value<T>(pool: &StakePool<T>): u64 { pool.yes_balance.value() }
 public fun no_balance_value<T>(pool: &StakePool<T>): u64 { pool.no_balance.value() }
 public fun staker_count<T>(pool: &StakePool<T>): u64 { pool.staked_agents.length() }
+public fun yes_weighted_total<T>(pool: &StakePool<T>): u64 { pool.yes_weighted_total }
+public fun no_weighted_total<T>(pool: &StakePool<T>): u64 { pool.no_weighted_total }
+public fun advocate_yes_id<T>(pool: &StakePool<T>): Option<ID> { pool.advocate_yes }
+public fun advocate_no_id<T>(pool: &StakePool<T>):  Option<ID> { pool.advocate_no  }
+public fun list_stakers<T>(pool: &StakePool<T>): vector<StakeRecord> { pool.stakes }
 
 public fun receipt_amount<T>(r: &StakeReceipt<T>): u64 { r.amount }
 public fun receipt_side<T>(r: &StakeReceipt<T>): bool { r.side_true }
 public fun receipt_pool_id<T>(r: &StakeReceipt<T>): ID { r.pool_id }
 public fun receipt_agent_id<T>(r: &StakeReceipt<T>): ID { r.agent_card_id }
+public fun receipt_weight<T>(r: &StakeReceipt<T>): u64 { r.weight }
+public fun receipt_is_advocate<T>(r: &StakeReceipt<T>): bool { r.is_advocate }
+
+// === StakeRecord reads (for off-chain matchmaking) ===
+public fun record_agent_id(r: &StakeRecord): ID { r.agent_id }
+public fun record_side_true(r: &StakeRecord): bool { r.side_true }
+public fun record_amount(r: &StakeRecord): u64 { r.amount }
+public fun record_weight(r: &StakeRecord): u64 { r.weight }
+public fun record_is_advocate(r: &StakeRecord): bool { r.is_advocate }
 
 // === Internal helpers ===
 fun agent_already_staked<T>(pool: &StakePool<T>, agent: &ID): bool {
