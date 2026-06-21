@@ -51,6 +51,8 @@ export interface CaseLawHit {
   kind: string;
   text: string;
   quiltId: string;
+  /** On-chain case object id this hit was decided on (if the quilt carries an anchor). */
+  caseId?: string;
 }
 
 /** Read one public entry from a Walrus quilt by identifier. */
@@ -78,6 +80,9 @@ export async function recall(query: string, quiltIds: string[], k = 5): Promise<
     quiltIds.map(async (quiltId) => {
       const manifest = await readEntry(quiltId, "_manifest");
       if (!manifest?.rows) return [] as CaseLawHit[];
+      const anchorRow = manifest.rows.find((r: any) => r.kind === "anchor");
+      const anchor = anchorRow ? await readEntry(quiltId, anchorRow.identifier) : null;
+      const caseIdForQuilt: string | undefined = anchor?.data?.caseId;
       const publicRows = manifest.rows.filter(
         (row: any) => row.kind === "verdict" || row.kind === "case_law",
       );
@@ -91,6 +96,7 @@ export async function recall(query: string, quiltIds: string[], k = 5): Promise<
           kind: entry.kind,
           text: entry.text,
           quiltId,
+          caseId: entry?.data?.caseId ?? caseIdForQuilt,
         }));
     }),
   );

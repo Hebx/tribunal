@@ -8,6 +8,7 @@ import { FullHash } from "@/components/Hash";
 import { OnChainPanel } from "@/components/OnChainPanel";
 import { DisputeButton } from "@/components/DisputeButton";
 import { StakeInPanel } from "@/components/StakeInPanel";
+import { PrecedentRecalled } from "@/components/PrecedentRecalled";
 import { explorerTx, explorerObject } from "@/lib/chain";
 import type { Agent } from "@/lib/types";
 
@@ -35,7 +36,7 @@ function AdvocateColumn({ agent, align }: { agent: Agent; align: "left" | "right
   );
 }
 
-export default function BattlePage({ params }: { params: { id: string } }) {
+export default async function BattlePage({ params }: { params: { id: string } }) {
   const battle = getMockBattle(params.id);
   if (!battle) notFound();
 
@@ -85,6 +86,9 @@ export default function BattlePage({ params }: { params: { id: string } }) {
         </div>
         <p className="text-sm leading-relaxed text-text">{battle.evidence}</p>
       </div>
+
+      {/* Precedent the jury recalled — semantic recall from Walrus case law */}
+      <PrecedentRecalled battle={battle} />
 
       {/* On-chain / Walrus chips */}
       <div className="mb-3 flex flex-wrap items-center gap-2">

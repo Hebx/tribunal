@@ -22,6 +22,7 @@ import {
   findCreated,
 } from "@/lib/tx";
 import { PACKAGE_ID, EVENTS, explorerTx, explorerObject } from "@/lib/chain";
+import { archetypeById } from "@/lib/personas";
 
 interface OwnedAgent {
   cardId: string;
@@ -88,7 +89,13 @@ export function StakeInPanel({ caseId, initialPoolId = null }: StakeInPanelProps
         })
         .filter(Boolean) as OwnedAgent[];
       setAgents(rows);
-      if (rows.length && !pickedAgent) setPickedAgent(rows[0].cardId);
+      // Default to the wallet's HIGHEST-SCORE agent (matchmaking rewards score,
+      // so picking the strongest agent should be the default — not the first
+      // owned object). User can switch in one click.
+      if (rows.length && !pickedAgent) {
+        const best = rows.slice().sort((a, b) => b.score - a.score)[0];
+        setPickedAgent(best.cardId);
+      }
     } catch (e: any) {
       setError(`Could not load your agents: ${String(e?.message ?? e)}`);
     } finally {
@@ -223,24 +230,59 @@ export function StakeInPanel({ caseId, initialPoolId = null }: StakeInPanelProps
                   Pick an agent
                 </label>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  {agents.map((a) => (
-                    <button
-                      key={a.cardId}
-                      type="button"
-                      onClick={() => setPickedAgent(a.cardId)}
-                      className={`rounded-xl border p-3 text-left transition ${
-                        pickedAgent === a.cardId
-                          ? "border-justice bg-justice/10 shadow-glow"
-                          : "border-steel/30 hover:border-steel"
-                      }`}
-                    >
-                      <div className="font-mono text-xs text-text">{a.cardId.slice(0, 10)}…</div>
-                      <div className="font-mono text-[10px] text-text-muted">
-                        {a.archetypeId || "—"} · score {a.score}
+                  {agents.map((a) => {
+                    const archetype = archetypeById(a.archetypeId);
+                    const isPicked = pickedAgent === a.cardId;
+                    return (
+                      <div
+                        key={a.cardId}
+                        className={`rounded-xl border p-3 text-left transition ${
+                          isPicked
+                            ? "border-justice bg-justice/10 shadow-glow"
+                            : "border-steel/30 hover:border-steel"
+                        }`}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => setPickedAgent(a.cardId)}
+                          className="block w-full text-left"
+                        >
+                          <div className="flex items-baseline justify-between gap-2">
+                            <span className="font-display text-sm font-700 text-text">
+                              {archetype?.name ?? a.archetypeId ?? "agent"}
+                            </span>
+                            <span className="font-mono text-[10px] text-justice">score {a.score}</span>
+                          </div>
+                          {archetype?.lens && (
+                            <p className="mt-0.5 text-[11px] leading-snug text-text-muted">
+                              {archetype.lens}
+                            </p>
+                          )}
+                        </button>
+                        <div className="mt-2 flex items-center justify-between gap-2 border-t border-steel/20 pt-2">
+                          <span
+                            className="truncate font-mono text-[10px] text-text-faint"
+                            title={a.cardId}
+                          >
+                            {a.cardId}
+                          </span>
+                          <a
+                            href={`/agents/${a.cardId}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="font-mono text-[10px] text-text-muted hover:text-justice"
+                            title="view full agent profile"
+                          >
+                            profile ↗
+                          </a>
+                        </div>
                       </div>
-                    </button>
-                  ))}
+                    );
+                  })}
                 </div>
+                <p className="font-mono text-[10px] text-text-faint">
+                  agents linked to {account!.address.slice(0, 10)}…{account!.address.slice(-6)} — default is your highest-score agent
+                </p>
               </div>
 
               {/* Side + amount */}

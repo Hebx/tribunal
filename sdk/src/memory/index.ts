@@ -34,7 +34,9 @@ export type EntryKind =
   | "jury_deliberation" // first-pass + final juror votes + dissent + disagreement
   | "guardrail_decision" // opus-4.8 ruling: ratification/override + bias flags
   // v3 — stake-gated matchmaking audit row (M3b)
-  | "provenance"; // reproducible audit trail: advocates / backers / jurors / seeds / configHashes / models
+  | "provenance" // reproducible audit trail: advocates / backers / jurors / seeds / configHashes / models
+  // v3 — case-law quilt anchor back to the on-chain case it summarises
+  | "anchor"; // { caseId, stakePoolId, configHashHex, battleId, models }
 
 export interface MemoryEntry {
   /** Stable within a namespace; becomes the Quilt patch identifier. */

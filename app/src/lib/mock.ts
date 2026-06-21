@@ -20,7 +20,9 @@ const now = Date.now();
 export const MOCK_BATTLES: Battle[] = [
   // ---- HERO: v3 live verified — settled YES ----
   // case object: 0xf7b15c1b…06cf · pool 0x350295…b56e4
-  // quilt: P1dOdJi1Vu_Ux5sifRAifNrqytBXCQDmoQpyKVPGoHg (6 typed patches)
+  // case-law quilt: f_KqulylakARqv6Dk1V00IJGMSvhpI7JgJnA1S31Xg0
+  //   verdict + case_law + on-chain anchor (caseId/pool/configHash) +
+  //   committee_vote drift row, written by `pnpm seed-arena`.
   {
     id: "battle-milestone",
     caseId: "0xf7b15c1b3045644a0a11e4f34612a163010464baa29ec07de56c2271b52206cf",
@@ -53,9 +55,9 @@ export const MOCK_BATTLES: Battle[] = [
     // case stored the hash, the v3 verifier opened it. Full hex below.
     configHashHex:
       "0x8cba4a23f84d32a994b9c99422e0218e73dce7ab62414620c77a89590014701f",
-    memoryNs: "walrus-ns://tribunal/v3-verify/1782073422920",
-    evidenceQuiltId: "P1dOdJi1Vu_Ux5sifRAifNrqytBXCQDmoQpyKVPGoHg",
-    citedPrecedent: false,
+    memoryNs: "walrus-ns://tribunal/arena-caselaw/v3",
+    evidenceQuiltId: "f_KqulylakARqv6Dk1V00IJGMSvhpI7JgJnA1S31Xg0",
+    citedPrecedent: true,
     verdict: {
       outcomeTrue: true,
       votesTrue: 2,
@@ -104,6 +106,7 @@ export const MOCK_BATTLES: Battle[] = [
 
   // ---- v3 first-staker stake-flow case — settled YES ----
   // case object: 0xfcda6e93…6dcb · pool 0x00b3e9…03e70
+  // case-law quilt: pcwId8Wi5MqhnbAlwiP_GcFrxZwjGHwJGKidy8_cgXQ
   // From DEPLOYMENTS.md "Stake-flow lifecycle verified end-to-end" run.
   {
     id: "battle-stake-lifecycle",
@@ -135,8 +138,9 @@ export const MOCK_BATTLES: Battle[] = [
     bondSui: 0.1,
     configHashHex:
       "0x5f4f97c4785d247ce2c93352c7cbadd76cc54f880d63896a2af8fa859d30f337",
-    memoryNs: "walrus-ns://tribunal/stake/1782070021879",
-    citedPrecedent: false,
+    memoryNs: "walrus-ns://tribunal/arena-caselaw/v3",
+    evidenceQuiltId: "pcwId8Wi5MqhnbAlwiP_GcFrxZwjGHwJGKidy8_cgXQ",
+    citedPrecedent: true,
     verdict: {
       outcomeTrue: true,
       votesTrue: 3,

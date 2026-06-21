@@ -80,4 +80,6 @@ export interface CaseLawHit {
   kind: string;
   text: string;
   quiltId: string;
+  /** On-chain case object id this hit was decided on (if the quilt carries an anchor). */
+  caseId?: string;
 }

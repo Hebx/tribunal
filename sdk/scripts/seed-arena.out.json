@@ -1,0 +1,23 @@
+{
+  "ts": 1782084447235,
+  "ns": "walrus-ns://tribunal/arena-caselaw/v3",
+  "models": [
+    "claude-haiku-4.5",
+    "claude-sonnet-4.6",
+    "claude-opus-4.8"
+  ],
+  "results": [
+    {
+      "tag": "zk-soundness-bounty",
+      "battleId": "battle-milestone",
+      "caseId": "0xf7b15c1b3045644a0a11e4f34612a163010464baa29ec07de56c2271b52206cf",
+      "quiltId": "f_KqulylakARqv6Dk1V00IJGMSvhpI7JgJnA1S31Xg0"
+    },
+    {
+      "tag": "stake-flow-schema",
+      "battleId": "battle-stake-lifecycle",
+      "caseId": "0xfcda6e93ff4a6283bfb599522b839ad0aa0d722753aafe88542cc8a157966dcb",
+      "quiltId": "pcwId8Wi5MqhnbAlwiP_GcFrxZwjGHwJGKidy8_cgXQ"
+    }
+  ]
+}
