@@ -15,7 +15,12 @@
     "incremental": true,
     "plugins": [{ "name": "next" }],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@tribunal/sdk/memory": ["../sdk/dist/src/memory/index"],
+      "@tribunal/sdk/memory/verdict": ["../sdk/dist/src/memory/verdict"],
+      "@tribunal/sdk/memory/walrus": ["../sdk/dist/src/memory/walrus"],
+      "@tribunal/sdk/memory/embeddings": ["../sdk/dist/src/memory/embeddings"],
+      "@tribunal/sdk/memory/seal": ["../sdk/dist/src/memory/seal"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

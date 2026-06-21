@@ -6,6 +6,7 @@ import { loadAgentPool } from "@/lib/server/load-agent-pool";
 import { pickAdvocates, BothSidesMustStake } from "@/lib/server/matchmaking";
 import { selectJury } from "@/lib/server/select-jury";
 import { assembleCaseAgents, MissingArchetypeError } from "@/lib/server/assemble-case";
+import { persistBundle } from "@/lib/server/persist";
 import { getMockBattle } from "@/lib/mock";
 import type { CaseInput } from "@/lib/server/debate";
 
@@ -135,7 +136,18 @@ export async function POST(req: Request) {
       },
     });
 
-    return NextResponse.json({ bundle });
+    // 8 — persist to Walrus as a typed Quilt (6 entries). Best-effort:
+    // the verdict still returns if Walrus is unreachable. UI surfaces the
+    // audit error inline so the gap is visible, not silently swallowed.
+    const audit = await persistBundle(caseId, bundle);
+
+    return NextResponse.json({
+      bundle,
+      audit:
+        audit.ok
+          ? { ok: true as const, ...audit.persisted }
+          : { ok: false as const, error: audit.error },
+    });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
     return NextResponse.json({ error: msg }, { status: 500 });
