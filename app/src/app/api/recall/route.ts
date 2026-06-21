@@ -4,17 +4,23 @@ import { recall } from "@/lib/server/recall";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Known public quilts holding Tribunal case law (verdict + case_law entries),
-// written by `npm run seed-arena` in the SDK. These match the arena's subjective
-// battles so recall surfaces genuinely relevant precedent. The two trailing
-// quilts are from the verified full-e2e + memory-demo runs (Helios lineage).
+// v3-anchored case-law quilts on Walrus, written by `pnpm seed-arena` in the
+// SDK. Each quilt's `_manifest` includes an `anchor` row carrying the on-chain
+// caseId / pool / configHash, so a recall hit can prove provenance back to its
+// case in one hop. No legacy / Helios seeds — every entry on /precedent traces
+// to a real v3 case.
+//
+// Update list: `pnpm --filter @tribunal/sdk seed-arena` writes
+// sdk/scripts/seed-arena.out.json with the new quilt ids; copy them here.
 const SEED_QUILTS = [
-  "nqhbOYetlCdhbdVfZ9hEzbI2l3TdIFLVEsJEJVipwqA", // milestone case law
-  "xGEPCPS0Uv0zbnwGCInMx5S9UIxndsDyActf4Pfd3Jg", // disclosure case law
-  "Fke1JGP9o6ZUKBPohX8V5uXhPVjGo0w9nsxZwgsrdOQ", // governance case law
-  "E0761R4PFVtil4qToPtI0B59-L5wvpkQecZdna8izfo", // Helios verdict (full-e2e)
-  "1plGkbwJibcmJgZy9CXL8ZtMPoPc9XjyJB_0dxo3yf0", // Helios case law (full-e2e)
+  "f_KqulylakARqv6Dk1V00IJGMSvhpI7JgJnA1S31Xg0", // zk-soundness-bounty (case 0xf7b15c…06cf)
+  "pcwId8Wi5MqhnbAlwiP_GcFrxZwjGHwJGKidy8_cgXQ", // stake-flow-schema (case 0xfcda6e…6dcb)
 ];
+
+// GET /api/recall — returns the active seed-quilt list (for debugging / Case Law page).
+export async function GET() {
+  return NextResponse.json({ quiltIds: SEED_QUILTS });
+}
 
 // POST /api/recall — semantic recall of public case law from Walrus memory.
 export async function POST(req: Request) {
