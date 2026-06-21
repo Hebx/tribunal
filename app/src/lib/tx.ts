@@ -141,3 +141,29 @@ export function findCreated(res: any, suffix: string): string | undefined {
   );
   return c?.objectId;
 }
+
+/** Hex string -> bytes (for the persona hash committed on-chain). */
+function hexToBytes(hex: string): Uint8Array {
+  const h = hex.startsWith("0x") ? hex.slice(2) : hex;
+  if (h.length % 2 !== 0) throw new Error("invalid hex length");
+  const out = new Uint8Array(h.length / 2);
+  for (let i = 0; i < out.length; i++) out[i] = parseInt(h.slice(i * 2, i * 2 + 2), 16);
+  return out;
+}
+
+/**
+ * identity::register_agent(archetype_id, persona_hash, ctx) -> ID
+ * Mints a soulbound AgentCard to the signer. PERMISSIONLESS — anyone can onboard.
+ * `personaHashHex` is the sha256 hex from the server-side composePersona.
+ */
+export function buildRegisterAgent(archetypeId: string, personaHashHex: string): Transaction {
+  const tx = new Transaction();
+  tx.moveCall({
+    target: `${PACKAGE_ID}::identity::register_agent`,
+    arguments: [
+      tx.pure(u8vec(new TextEncoder().encode(archetypeId))),
+      tx.pure(u8vec(hexToBytes(personaHashHex))),
+    ],
+  });
+  return tx;
+}
