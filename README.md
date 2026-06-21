@@ -13,7 +13,7 @@
 [![Sui](https://img.shields.io/badge/Sui-testnet-6fbcf0?logo=sui&logoColor=white)](https://suiscan.xyz/testnet/object/0x2c8697803b3eec5b8e0e0391a4f1dacb0760a904ed67add840d94452b1cd3750)
 [![Walrus](https://img.shields.io/badge/Walrus-typed%20case%20law-7c3aed)](https://www.walrus.xyz)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.2.0--alpha-blue)](#versioning)
+[![Version](https://img.shields.io/badge/version-0.3.0--alpha-blue)](#versioning)
 
 </div>
 
@@ -52,8 +52,9 @@ research-backed; the implementation is on Sui + Walrus.
    ┌────────────────┐  ┌─────────────────────┐  ┌──────────────────┐  ┌────────────────────┐
    │ register_agent │→ │  advocate debate    │→ │  jury deliberate │→ │  guardrail rules   │
    │ (soulbound)    │  │  (N rounds, both    │  │  (first pass +   │  │  (binding verdict; │
-   │ + persona hash │  │   sides argue)      │  │   cross-exam,    │  │   ratifies or      │
-   │                │  │                     │  │   dissent kept)  │  │   overrides jury)  │
+   │ + persona hash │  │   sides argue,      │  │   cross-exam,    │  │   ratifies or      │
+   │                │  │   first staker = ┐  │  │   dissent kept)  │  │   overrides jury)  │
+   │                │  │   advocate, 3×)  │  │  │                  │  │                    │
    └────────────────┘  └─────────────────────┘  └──────────────────┘  └────────────────────┘
                                   ↓                       ↓                       ↓
                           debate transcript     jury first/final +       guardrail decision +
@@ -63,12 +64,28 @@ research-backed; the implementation is on Sui + Walrus.
                                                               ────────────────────────────────────
                                                                           ↓
    ┌─────────────────────────────────────────────────────────────────────────────────────────────┐
-   │  Sui: assert_resolution(outcome, bond, evidence_ref)                                        │
+   │  Walrus: 6-entry Quilt per case                                                              │
+   │    debate · jury · guardrail · verdict · case_law · provenance ← v3 audit row                │
+   │                                                                                              │
+   │  Sui: assert_resolution(outcome, bond, evidence_ref → quilt_id)                             │
    │       record_outcome(agent, win|loss)            ←  reputation moves on settle, not earlier │
-   │       stake → claim_winnings                     ←  winners drain the losing pool          │
+   │       stake → claim_winnings (3× weighted)       ←  advocates get 3× losing-pool share       │
    │       dispute_resolution                         ←  permissionless, bonded; can overturn    │
    └─────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
+
+## What v3 adds
+
+| Feature | What changed | Why it matters |
+|---|---|---|
+| **Stake-gated resolution** | A case is not resolvable until both sides have a staked advocate. `POST /api/resolve` 409s with `BothSidesMustStake` if either side is empty. | No more single-party AI judgments. Compute spend is gated on economic skin-in-the-game. |
+| **First-staker advocacy** | The first wallet to stake YES (or NO) locks the advocate slot for that side. Immutable thereafter. | The protocol picks advocates by **conviction**, not by a centralized matchmaker. |
+| **3× weighted claim share** | Advocates get a `3.00×` share weight on the losing pool; backers get `1.00×`. Principal is fully returned to all winners. | The advocate carries the argument and gets paid for it — `verify-v3-flow.mts` asserts the **exact-3× bonus** invariant at equal stake on every run. |
+| **6-entry audit-trail Quilt** | Every verdict persists a Quilt with `debate · jury · guardrail · verdict · case_law · provenance`. Provenance is the full audit row: advocates (w/ first-staker flag + weight) · backers · jurors (archetype + seed) · model map · gateway temperatures · configHashes · resolverCommit. | Replay a run with the pinned hashes and commit — get the same verdict. **That's reproducibility, not vibes.** |
+| **Graceful Walrus degradation** | If the Walrus publisher is unreachable, the verdict still returns and `audit: { ok: false, error }` is surfaced inline. The on-chain `configHash` + `guardrailConfigHash` are the tamper-evident root. | The trail can fail open; the integrity root cannot. |
+
+Migration details in [`MIGRATION-v3.md`](MIGRATION-v3.md). End-to-end walked
+through a concrete case in [`USER_STORY.md`](USER_STORY.md).
 
 ## The on-chain / off-chain boundary
 
@@ -146,6 +163,7 @@ TRIBUNAL_NETWORK=testnet npm run deploy
 node --import tsx scripts/verify-identity.mts     # mint AgentCard, score moves
 node --import tsx scripts/verify-outcomes.mts     # bundled assert + record_outcome
 node --import tsx scripts/verify-stake.mts        # full stake → settle → claim
+node --import tsx scripts/verify-v3-flow.mts      # v3: first-staker advocacy + 3× payout + 6-entry Quilt
 node --import tsx scripts/full-e2e.ts             # legacy disputed + undisputed flow
 
 # 5) Arena (Next.js)
@@ -223,12 +241,14 @@ question is *which frame applies*, not *what happened*.
 
 ## Status + roadmap
 
-**Current: `v0.2.0-alpha`** — Tribunal v2 persona-debate is feature-complete on
-testnet. Move + SDK + App all green; full lifecycle (mint → debate → jury →
-guardrail → assert → stake → claim → dispute → settle) verified end-to-end with
-real testnet digests.
+**Current: `v0.3.0-alpha`** — Tribunal v3 stake-gated arbitration is
+feature-complete on testnet. Move + SDK + App all green. Full lifecycle
+(mint → stake both sides → debate → jury → guardrail → 6-entry Walrus Quilt
+→ assert → settle → 3×-weighted claim → dispute) verified end-to-end with
+real testnet digests via [`sdk/scripts/verify-v3-flow.mts`](sdk/scripts/verify-v3-flow.mts).
 
 **Next:**
+- Source case text from the on-chain `evidence_ref → Walrus` blob for live-summoned cases (today seeded battles carry it inline)
 - Mainnet deployment + audit
 - Long-running tournament metrics across the persona roster
 - Cross-DAO precedent sharing (typed case law as a public good)
