@@ -47,7 +47,7 @@ with archetype + seed, the model map, gateway temperatures, both
 configHashes (`configHashHex` for the resolver stack, `guardrailConfigHash`
 for the judge's locked prompt), and the resolver commit.
 
-> *"This is the v3 audit chain. caseId → Quilt → six typed entries → re-run
+> *"This is the audit chain. caseId → Quilt → six typed entries → re-run
 > with the pinned hashes and commit, and you get the same verdict. That's
 > reproducibility, not vibes. And it compounds — go to Case Law, search
 > `zk soundness reachable exploit`, the top hit is a prior tribunal ruling
