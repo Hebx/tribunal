@@ -4,8 +4,8 @@
 //
 // Renders the Walrus Quilt as a list of typed entries with:
 //   - kind label + sealed-vs-public badge
-//   - copyable patch identifier (so a reader can fetch the entry independently
-//     of this UI via `<aggregator>/v1/blobs/by-quilt-patch-id/<patchId>`)
+//   - copyable in-quilt identifier (so a reader can fetch the entry
+//     independently via `<aggregator>/v1/blobs/by-quilt-id/<quiltId>/<identifier>`)
 //   - configHash chips so a reader can confirm the prompt version inline
 //   - the provenance entry, when present, expanded into a structured block
 //     (advocates, backers, jurors, jury seed, models, gateway)
@@ -18,7 +18,7 @@ import type { ReactNode } from "react";
 
 export interface AuditEntry {
   kind: string;
-  patchId: string;
+  identifier: string;
   /** Optional plain-text preview (we render confidential kinds without text). */
   preview?: string;
 }
@@ -88,19 +88,23 @@ function shortId(id: string, n = 12): string {
   return `${id.slice(0, n)}…`;
 }
 
-function patchUrl(aggregator: string, patchId: string): string {
-  // Walrus aggregator patch read endpoint.
-  return `${aggregator.replace(/\/$/, "")}/v1/blobs/by-quilt-patch-id/${encodeURIComponent(patchId)}`;
+function patchUrl(aggregator: string, quiltId: string, identifier: string): string {
+  // Walrus aggregator: read one quilt entry by quiltId + identifier.
+  // (The `by-quilt-patch-id/<id>` endpoint takes a real Walrus blob id and
+  // rejects in-quilt identifiers like `debate__0xf7b15c…` with a parse error.)
+  return `${aggregator.replace(/\/$/, "")}/v1/blobs/by-quilt-id/${encodeURIComponent(quiltId)}/${encodeURIComponent(identifier)}`;
 }
 
 function EntryRow({
   kind,
-  patchId,
+  identifier,
+  quiltId,
   aggregator,
   settled,
 }: {
   kind: string;
-  patchId: string;
+  identifier: string;
+  quiltId: string;
   aggregator: string;
   settled: boolean;
 }) {
@@ -122,9 +126,9 @@ function EntryRow({
         )}
       </div>
       <div className="flex items-center gap-2 font-mono text-[10px] text-text-faint">
-        <span>patch · {shortId(patchId, 16)}</span>
+        <span title={identifier}>patch · {shortId(identifier, 16)}</span>
         <a
-          href={patchUrl(aggregator, patchId)}
+          href={patchUrl(aggregator, quiltId, identifier)}
           target="_blank"
           rel="noreferrer"
           className="hover:text-justice"
@@ -194,9 +198,9 @@ export function AuditTrail({
     );
   }
 
-  const entries: AuditEntry[] = Object.entries(patches).map(([kind, patchId]) => ({
+  const entries: AuditEntry[] = Object.entries(patches).map(([kind, identifier]) => ({
     kind,
-    patchId,
+    identifier,
   }));
 
   return (
@@ -215,9 +219,10 @@ export function AuditTrail({
       <ul className="mb-5 space-y-3">
         {entries.map((e) => (
           <EntryRow
-            key={e.patchId}
+            key={e.identifier}
             kind={e.kind}
-            patchId={e.patchId}
+            identifier={e.identifier}
+            quiltId={quiltId}
             aggregator={aggregator}
             settled={settled}
           />
