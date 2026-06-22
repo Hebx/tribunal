@@ -8,6 +8,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --import tsx --test src/**/*.test.ts",
     "deploy": "node --import tsx scripts/deploy.ts",
     "e2e": "node --import tsx scripts/e2e.ts",
     "memory-demo": "node --import tsx scripts/memory-demo.ts",

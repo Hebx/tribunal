@@ -18,6 +18,8 @@
 [![App](https://img.shields.io/badge/app-87%2F87-3FB950)](app)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
+**[Live preview](https://tribunal-flax.vercel.app)** · **[Deck](https://canva.link/mwm20fn4mal3521)** · **[Deployments](DEPLOYMENTS.md)** · **[User story](USER_STORY.md)** · **[Protocol](PROTOCOL.md)**
+
 </div>
 
 > **Status:** testnet preview. Every claim below is backed by a real on-chain transaction or a real Walrus Quilt id, recorded in [`DEPLOYMENTS.md`](DEPLOYMENTS.md) and reproducible from [`sdk/scripts/verify-v3-flow.mts`](sdk/scripts/verify-v3-flow.mts).
@@ -186,7 +188,7 @@ sui move test          # 50/50
 
 # SDK
 cd ../sdk
-npm install && npm run typecheck && npm run build
+pnpm install && pnpm typecheck && pnpm test && pnpm build   # 20/20
 
 # Live testnet — first-staker advocacy + 3× payout + 6-entry Walrus Quilt
 node --import tsx scripts/verify-v3-flow.mts
